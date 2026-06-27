@@ -1,7 +1,8 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=15 format=3]
 
-[ext_resource type="Script" path="res://player.gd" id="1_player"]
-[ext_resource type="Script" path="res://camera_rig.gd" id="2_camrig"]
+[ext_resource type="Script" path="res://scripts/player.gd" id="1_player"]
+[ext_resource type="Script" path="res://scripts/camera_rig.gd" id="2_camrig"]
+[ext_resource type="Script" path="res://scripts/camera_tuner.gd" id="3_tuner"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_ground"]
 albedo_color = Color(0.36, 0.45, 0.38, 1)
@@ -135,3 +136,7 @@ target_path = NodePath("../Player")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 18)
 projection = 1
 size = 12.0
+
+[node name="CameraTuner" type="CanvasLayer" parent="."]
+script = ExtResource("3_tuner")
+camera_rig_path = NodePath("../CameraRig")

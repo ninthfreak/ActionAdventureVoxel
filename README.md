@@ -19,7 +19,7 @@ with the camera angle exposed so you can find the look by feel.
 
 ## The thing to actually play with
 
-Open `main.tscn`, click the **CameraRig** node, and look at the inspector.
+Open `scenes/main.tscn`, click the **CameraRig** node, and look at the inspector.
 With the scene open you can scrub these and watch the view change live:
 
 - **Camera pitch degrees** — `90` is classic top-down (most Zelda-like, hides the
