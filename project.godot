@@ -1,0 +1,14 @@
+; Engine configuration file.
+; Voxel Action RPG — movement + camera prototype slice.
+
+config_version=5
+
+[application]
+
+config/name="Voxel Action RPG Prototype"
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.3", "Forward Plus")
+
+[rendering]
+
+environment/defaults/default_clear_color=Color(0.42, 0.52, 0.63, 1)

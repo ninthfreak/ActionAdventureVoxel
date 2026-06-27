@@ -1,0 +1,137 @@
+[gd_scene load_steps=14 format=3]
+
+[ext_resource type="Script" path="res://player.gd" id="1_player"]
+[ext_resource type="Script" path="res://camera_rig.gd" id="2_camrig"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_ground"]
+albedo_color = Color(0.36, 0.45, 0.38, 1)
+roughness = 1.0
+
+[sub_resource type="StandardMaterial3D" id="Mat_player"]
+albedo_color = Color(0.27, 0.5, 0.78, 1)
+roughness = 0.9
+
+[sub_resource type="StandardMaterial3D" id="Mat_marker"]
+albedo_color = Color(0.95, 0.62, 0.2, 1)
+roughness = 0.8
+
+[sub_resource type="StandardMaterial3D" id="Mat_obstacle"]
+albedo_color = Color(0.62, 0.45, 0.36, 1)
+roughness = 1.0
+
+[sub_resource type="PlaneMesh" id="Mesh_ground"]
+material = SubResource("Mat_ground")
+size = Vector2(40, 40)
+
+[sub_resource type="BoxMesh" id="Mesh_player"]
+material = SubResource("Mat_player")
+size = Vector3(0.7, 1.1, 0.7)
+
+[sub_resource type="BoxMesh" id="Mesh_marker"]
+material = SubResource("Mat_marker")
+size = Vector3(0.3, 0.3, 0.3)
+
+[sub_resource type="BoxMesh" id="Mesh_obstacle"]
+material = SubResource("Mat_obstacle")
+size = Vector3(1, 1, 1)
+
+[sub_resource type="BoxShape3D" id="Shape_ground"]
+size = Vector3(40, 1, 40)
+
+[sub_resource type="BoxShape3D" id="Shape_player"]
+size = Vector3(0.7, 1.1, 0.7)
+
+[sub_resource type="BoxShape3D" id="Shape_obstacle"]
+size = Vector3(1, 1, 1)
+
+[node name="Main" type="Node3D"]
+
+[node name="Ground" type="StaticBody3D" parent="."]
+
+[node name="Mesh" type="MeshInstance3D" parent="Ground"]
+mesh = SubResource("Mesh_ground")
+
+[node name="Collision" type="CollisionShape3D" parent="Ground"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+shape = SubResource("Shape_ground")
+
+[node name="KeyLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.643, -0.766, 0, 0.766, 0.643, 0, 8, 0)
+light_energy = 1.0
+shadow_enabled = true
+
+[node name="FillLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -0.866, -0.5, 0, 0.5, -0.866, 0, 8, 0)
+light_energy = 0.45
+shadow_enabled = false
+
+[node name="Obstacle1" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0.5, -2)
+
+[node name="Mesh" type="MeshInstance3D" parent="Obstacle1"]
+mesh = SubResource("Mesh_obstacle")
+
+[node name="Collision" type="CollisionShape3D" parent="Obstacle1"]
+shape = SubResource("Shape_obstacle")
+
+[node name="Obstacle2" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0.5, 1)
+
+[node name="Mesh" type="MeshInstance3D" parent="Obstacle2"]
+mesh = SubResource("Mesh_obstacle")
+
+[node name="Collision" type="CollisionShape3D" parent="Obstacle2"]
+shape = SubResource("Shape_obstacle")
+
+[node name="Obstacle3" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.5, -5)
+
+[node name="Mesh" type="MeshInstance3D" parent="Obstacle3"]
+mesh = SubResource("Mesh_obstacle")
+
+[node name="Collision" type="CollisionShape3D" parent="Obstacle3"]
+shape = SubResource("Shape_obstacle")
+
+[node name="PillarLower" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0.5, 4)
+
+[node name="Mesh" type="MeshInstance3D" parent="PillarLower"]
+mesh = SubResource("Mesh_obstacle")
+
+[node name="Collision" type="CollisionShape3D" parent="PillarLower"]
+shape = SubResource("Shape_obstacle")
+
+[node name="PillarUpper" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 1.5, 4)
+
+[node name="Mesh" type="MeshInstance3D" parent="PillarUpper"]
+mesh = SubResource("Mesh_obstacle")
+
+[node name="Collision" type="CollisionShape3D" parent="PillarUpper"]
+shape = SubResource("Shape_obstacle")
+
+[node name="Player" type="CharacterBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+script = ExtResource("1_player")
+
+[node name="Body" type="MeshInstance3D" parent="Player"]
+mesh = SubResource("Mesh_player")
+
+[node name="Marker" type="MeshInstance3D" parent="Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0.45)
+mesh = SubResource("Mesh_marker")
+
+[node name="Collision" type="CollisionShape3D" parent="Player"]
+shape = SubResource("Shape_player")
+
+[node name="CameraRig" type="Node3D" parent="."]
+script = ExtResource("2_camrig")
+camera_pitch_degrees = 60.0
+camera_distance = 18.0
+camera_view_size = 12.0
+target_path = NodePath("../Player")
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 18)
+projection = 1
+size = 12.0
