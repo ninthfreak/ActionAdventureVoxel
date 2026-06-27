@@ -12,14 +12,8 @@ extends CharacterBody3D
 
 func _read_input_direction() -> Vector3:
 	var dir := Vector3.ZERO
-	if Input.is_physical_key_pressed(KEY_W) or Input.is_physical_key_pressed(KEY_UP):
-		dir.z -= 1.0
-	if Input.is_physical_key_pressed(KEY_S) or Input.is_physical_key_pressed(KEY_DOWN):
-		dir.z += 1.0
-	if Input.is_physical_key_pressed(KEY_A) or Input.is_physical_key_pressed(KEY_LEFT):
-		dir.x -= 1.0
-	if Input.is_physical_key_pressed(KEY_D) or Input.is_physical_key_pressed(KEY_RIGHT):
-		dir.x += 1.0
+	dir.x = Input.get_axis("move_left", "move_right")
+	dir.z = Input.get_axis("move_up", "move_down")
 	return dir.normalized()
 
 func _physics_process(delta: float) -> void:

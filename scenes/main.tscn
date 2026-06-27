@@ -1,7 +1,7 @@
 [gd_scene load_steps=14 format=3]
 
-[ext_resource type="Script" path="res://player.gd" id="1_player"]
-[ext_resource type="Script" path="res://camera_rig.gd" id="2_camrig"]
+[ext_resource type="Script" path="res://scripts/player.gd" id="1_player"]
+[ext_resource type="Script" path="res://scripts/camera_rig.gd" id="2_camrig"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_ground"]
 albedo_color = Color(0.36, 0.45, 0.38, 1)
