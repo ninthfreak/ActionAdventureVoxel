@@ -70,7 +70,6 @@ static func _parse_obj(path: String, colors: Dictionary) -> ArrayMesh:
 	mat.vertex_color_use_as_albedo = true
 	mat.roughness = 1.0
 	mat.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
-	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 
 	var total := tri_v.size()
 	var chunk := 60000
