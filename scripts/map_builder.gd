@@ -102,3 +102,4 @@ func _make_unshaded(mesh: Mesh) -> void:
 		var mat := mesh.surface_get_material(i)
 		if mat is StandardMaterial3D:
 			mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
