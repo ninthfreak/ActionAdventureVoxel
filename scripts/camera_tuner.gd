@@ -54,7 +54,7 @@ func _build_ui() -> void:
 	_pitch_slider.value_changed.connect(_on_pitch_changed)
 
 	_rotate_label = Label.new()
-	_rotate_slider = _add_slider(vbox, _rotate_label, -180.0, 180.0, 0.5)
+	_rotate_slider = _add_slider(vbox, _rotate_label, -180.0, 180.0, 0.25)
 	_rotate_slider.value_changed.connect(_on_rotate_changed)
 
 	_size_label = Label.new()
