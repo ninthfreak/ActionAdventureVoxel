@@ -81,7 +81,7 @@ shape = SubResource("Shape_player")
 
 [node name="CameraRig" type="Node3D" parent="."]
 script = ExtResource("2_camrig")
-camera_pitch_degrees = 60.0
+camera_pitch_degrees = 35.0
 camera_distance = 18.0
 camera_view_size = 12.0
 target_path = NodePath("../Player")

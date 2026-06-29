@@ -92,5 +92,13 @@ func _load_mesh(block_name: String) -> Mesh:
 		return _mesh_cache[block_name]
 	var path := "res://blocks/%s.obj" % block_name
 	var mesh: Mesh = load(path)
+	if mesh:
+		_make_unshaded(mesh)
 	_mesh_cache[block_name] = mesh
 	return mesh
+
+func _make_unshaded(mesh: Mesh) -> void:
+	for i in mesh.get_surface_count():
+		var mat := mesh.surface_get_material(i)
+		if mat is StandardMaterial3D:
+			mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
