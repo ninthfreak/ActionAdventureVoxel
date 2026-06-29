@@ -57,12 +57,21 @@ static func _parse_obj(path: String, colors: Dictionary) -> ArrayMesh:
 				var pair := p[i].split("//")
 				face_v.append(int(pair[0]) - 1)
 				face_n.append(int(pair[1]) - 1)
-			# Fan-triangulate (works for quads and n-gons)
 			for i in range(1, face_v.size() - 1):
-				for idx in [0, i, i + 1]:
-					tri_v.append(verts[face_v[idx]])
-					tri_n.append(norms[face_n[idx]])
-					tri_c.append(cur_color)
+				var v0 := verts[face_v[0]]
+				var v1 := verts[face_v[i]]
+				var v2 := verts[face_v[i + 1]]
+				var n0 := norms[face_n[0]]
+				var n1 := norms[face_n[i]]
+				var n2 := norms[face_n[i + 1]]
+				if (v1 - v0).cross(v2 - v0).dot(n0) > 0.0:
+					var tv := v1; v1 = v2; v2 = tv
+					var tn := n1; n1 = n2; n2 = tn
+				tri_v.append(v0); tri_v.append(v1); tri_v.append(v2)
+				tri_n.append(n0); tri_n.append(n1); tri_n.append(n2)
+				tri_c.append(cur_color)
+				tri_c.append(cur_color)
+				tri_c.append(cur_color)
 	f.close()
 
 	var mesh := ArrayMesh.new()
