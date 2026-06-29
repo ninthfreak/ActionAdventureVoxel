@@ -59,9 +59,9 @@ static func migrate(world: Node, map_layout: String, struct_layout: String, cent
 			var block_name: String = BLOCK_KEY.get(ch, "")
 			if block_name.is_empty():
 				continue
-			var wy := 0
+			var wy := -1
 			if ch == "W":
-				wy = -1
+				wy = -2
 			var wx := col_idx + ox
 			var wz := row_idx + oz
 			world.set_block_no_rebuild(wx, wy, wz, BlockRegistry.get_id(block_name))
@@ -86,12 +86,12 @@ static func migrate(world: Node, map_layout: String, struct_layout: String, cent
 
 			if GROUND_UNDER.has(ch):
 				var ground_name: String = GROUND_UNDER[ch]
-				world.set_block_no_rebuild(wx, 0, wz, BlockRegistry.get_id(ground_name))
+				world.set_block_no_rebuild(wx, -1, wz, BlockRegistry.get_id(ground_name))
 
 			var stack: int = STACK_HEIGHT.get(ch, 1)
 			var block_id := BlockRegistry.get_id(block_name)
 			for y in stack:
-				world.set_block_no_rebuild(wx, y + 1, wz, block_id)
+				world.set_block_no_rebuild(wx, y, wz, block_id)
 
 			if ch == "R":
 				_place_roof_peak(world, block_name, col_idx, row_idx, row, srows, ox, oz)
@@ -102,4 +102,4 @@ static func _place_roof_peak(world: Node, block_name: String, col: int, row_idx:
 	var left_r := col > 0 and col - 1 < row.length() and row[col - 1] == "R"
 	var right_r := col + 1 < row.length() and row[col + 1] == "R"
 	if left_r and right_r:
-		world.set_block_no_rebuild(col + ox, 2, row_idx + oz, BlockRegistry.get_id(block_name))
+		world.set_block_no_rebuild(col + ox, 1, row_idx + oz, BlockRegistry.get_id(block_name))
