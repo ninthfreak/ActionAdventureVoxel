@@ -20,7 +20,6 @@ const WALL_TILES := ["B"]
 @export var center_map: bool = true
 
 var _mesh_cache: Dictionary = {}
-var _override_cache: Dictionary = {}
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
@@ -59,17 +58,16 @@ func _build() -> void:
 				_add_wall(block_name, Vector3(col_idx, 0.0, row_idx) + offset)
 
 func _add_block(block_name: String, pos: Vector3) -> void:
-	var mesh := _load_mesh(block_name)
+	var mesh := _get_mesh(block_name)
 	if not mesh:
 		return
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
 	mi.position = pos
-	_apply_opaque_overrides(mi, block_name)
 	add_child(mi)
 
 func _add_wall(block_name: String, pos: Vector3) -> void:
-	var mesh := _load_mesh(block_name)
+	var mesh := _get_mesh(block_name)
 	if not mesh:
 		return
 
@@ -78,7 +76,6 @@ func _add_wall(block_name: String, pos: Vector3) -> void:
 
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
-	_apply_opaque_overrides(mi, block_name)
 	body.add_child(mi)
 
 	var col := CollisionShape3D.new()
@@ -90,35 +87,9 @@ func _add_wall(block_name: String, pos: Vector3) -> void:
 
 	add_child(body)
 
-func _apply_opaque_overrides(mi: MeshInstance3D, block_name: String) -> void:
-	var overrides := _get_overrides(block_name)
-	for i in overrides.size():
-		mi.set_surface_override_material(i, overrides[i])
-
-func _get_overrides(block_name: String) -> Array:
-	if _override_cache.has(block_name):
-		return _override_cache[block_name]
-	var mesh := _load_mesh(block_name)
-	if not mesh:
-		_override_cache[block_name] = []
-		return []
-	var mats: Array = []
-	for i in mesh.get_surface_count():
-		var src := mesh.surface_get_material(i)
-		var fresh := StandardMaterial3D.new()
-		if src is StandardMaterial3D:
-			fresh.albedo_color = Color(src.albedo_color.r, src.albedo_color.g, src.albedo_color.b, 1.0)
-		else:
-			fresh.albedo_color = Color(0.5, 0.5, 0.5, 1.0)
-		fresh.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		mats.append(fresh)
-	_override_cache[block_name] = mats
-	return mats
-
-func _load_mesh(block_name: String) -> Mesh:
+func _get_mesh(block_name: String) -> ArrayMesh:
 	if _mesh_cache.has(block_name):
 		return _mesh_cache[block_name]
-	var path := "res://blocks/%s.obj" % block_name
-	var mesh: Mesh = load(path)
+	var mesh := ObjLoader.load_block(block_name)
 	_mesh_cache[block_name] = mesh
 	return mesh
