@@ -65,18 +65,23 @@ static func _parse_obj(path: String, colors: Dictionary) -> ArrayMesh:
 					tri_c.append(cur_color)
 	f.close()
 
-	var arrays := []
-	arrays.resize(Mesh.ARRAY_MAX)
-	arrays[Mesh.ARRAY_VERTEX] = tri_v
-	arrays[Mesh.ARRAY_NORMAL] = tri_n
-	arrays[Mesh.ARRAY_COLOR] = tri_c
-
 	var mesh := ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-
 	var mat := StandardMaterial3D.new()
 	mat.vertex_color_use_as_albedo = true
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mesh.surface_set_material(0, mat)
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+
+	var total := tri_v.size()
+	var chunk := 60000
+	var i := 0
+	while i < total:
+		var end := mini(i + chunk, total)
+		var arrays := []
+		arrays.resize(Mesh.ARRAY_MAX)
+		arrays[Mesh.ARRAY_VERTEX] = tri_v.slice(i, end)
+		arrays[Mesh.ARRAY_NORMAL] = tri_n.slice(i, end)
+		arrays[Mesh.ARRAY_COLOR] = tri_c.slice(i, end)
+		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		mesh.surface_set_material(mesh.get_surface_count() - 1, mat)
+		i = end
 
 	return mesh
