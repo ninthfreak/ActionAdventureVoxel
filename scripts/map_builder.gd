@@ -91,15 +91,17 @@ func _load_mesh(block_name: String) -> Mesh:
 	if _mesh_cache.has(block_name):
 		return _mesh_cache[block_name]
 	var path := "res://blocks/%s.obj" % block_name
-	var mesh: Mesh = load(path)
-	if mesh:
-		_make_unshaded(mesh)
-	_mesh_cache[block_name] = mesh
-	return mesh
-
-func _make_unshaded(mesh: Mesh) -> void:
+	var imported: Mesh = load(path)
+	if not imported:
+		_mesh_cache[block_name] = null
+		return null
+	var mesh := imported.duplicate() as Mesh
 	for i in mesh.get_surface_count():
 		var mat := mesh.surface_get_material(i)
 		if mat is StandardMaterial3D:
-			mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-			mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
+			var fixed := mat.duplicate() as StandardMaterial3D
+			fixed.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			fixed.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
+			mesh.surface_set_material(i, fixed)
+	_mesh_cache[block_name] = mesh
+	return mesh
