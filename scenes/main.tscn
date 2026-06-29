@@ -27,7 +27,16 @@ size = Vector3(0.7, 1.1, 0.7)
 [sub_resource type="BoxShape3D" id="Shape_ground"]
 size = Vector3(60, 1, 60)
 
+[sub_resource type="Environment" id="Env_main"]
+ambient_light_source = 1
+ambient_light_color = Color(0.6, 0.65, 0.75, 1)
+ambient_light_energy = 0.5
+tonemap_mode = 0
+
 [node name="Main" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_main")
 
 [node name="Ground" type="StaticBody3D" parent="."]
 
@@ -90,15 +99,10 @@ GDDGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGSSSSWWWWWWWWWWWWWWW
 GDDGGGGGGGGGGGGGGGGGGGGGGGGGGGGGSSWWWWWWWWWWWWWWWWWW"
 center_map = true
 
-[node name="KeyLight" type="DirectionalLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 10, 0)
-light_energy = 1.4
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, -0.866, 0, 0.866, 0.5, 0, 10, 0)
+light_energy = 1.2
 shadow_enabled = true
-
-[node name="FillLight" type="DirectionalLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, -0.259, -0.966, 0, 0.966, -0.259, 0, 10, 0)
-light_energy = 0.6
-shadow_enabled = false
 
 [node name="Player" type="CharacterBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
@@ -130,3 +134,4 @@ size = 14.0
 [node name="CameraTuner" type="CanvasLayer" parent="."]
 script = ExtResource("3_tuner")
 camera_rig_path = NodePath("../CameraRig")
+sun_path = NodePath("../Sun")
