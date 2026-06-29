@@ -1,9 +1,11 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scripts/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/camera_rig.gd" id="2_camrig"]
 [ext_resource type="Script" path="res://scripts/camera_tuner.gd" id="3_tuner"]
-[ext_resource type="Script" path="res://scripts/map_builder.gd" id="4_map"]
+[ext_resource type="Script" path="res://scripts/voxel/voxel_world.gd" id="4_vworld"]
+[ext_resource type="Script" path="res://scripts/voxel/block_editor.gd" id="5_editor"]
+[ext_resource type="Script" path="res://scripts/voxel/block_editor_ui.gd" id="6_editor_ui"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_player"]
 albedo_color = Color(0.27, 0.5, 0.78, 1)
@@ -25,7 +27,7 @@ size = Vector3(0.3, 0.3, 0.3)
 size = Vector3(0.7, 1.1, 0.7)
 
 [sub_resource type="BoxShape3D" id="Shape_ground"]
-size = Vector3(60, 1, 60)
+size = Vector3(200, 1, 200)
 
 [sub_resource type="Environment" id="Env_main"]
 ambient_light_source = 1
@@ -44,9 +46,9 @@ environment = SubResource("Env_main")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 shape = SubResource("Shape_ground")
 
-[node name="Map" type="Node3D" parent="."]
-script = ExtResource("4_map")
-map_layout = "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+[node name="VoxelWorld" type="Node3D" parent="."]
+script = ExtResource("4_vworld")
+fallback_map_layout = "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
 GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
 GGGGGGGGGGGGVVVVVVGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
 GGGGGGGGGGGVVVVVVVVGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
@@ -97,7 +99,7 @@ GGDDGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGSSSSSSSWWWWWWWWWW
 GDDGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGSSSSSSWWWWWWWWWWWW
 GDDGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGSSSSWWWWWWWWWWWWWWW
 GDDGGGGGGGGGGGGGGGGGGGGGGGGGGGGGSSWWWWWWWWWWWWWWWWWW"
-struct_layout = "....................................................
+fallback_struct_layout = "....................................................
 ....................................................
 ..........T.......T.................................
 ....................................................
@@ -148,7 +150,7 @@ struct_layout = "....................................................
 ....................................................
 ....................................................
 ...................................................."
-center_map = true
+fallback_center_map = true
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.5, -0.866, 0, 0.866, 0.5, 0, 10, 0)
@@ -186,3 +188,12 @@ size = 14.0
 script = ExtResource("3_tuner")
 camera_rig_path = NodePath("../CameraRig")
 sun_path = NodePath("../Sun")
+
+[node name="BlockEditor" type="Node" parent="."]
+script = ExtResource("5_editor")
+voxel_world_path = NodePath("../VoxelWorld")
+camera_path = NodePath("../CameraRig/Camera3D")
+
+[node name="BlockEditorUI" type="CanvasLayer" parent="."]
+script = ExtResource("6_editor_ui")
+editor_path = NodePath("../BlockEditor")
