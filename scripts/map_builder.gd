@@ -54,6 +54,7 @@ func _ready() -> void:
 	if Engine.is_editor_hint():
 		return
 	_build()
+	_check_bad_obj_files()
 
 func _build() -> void:
 	var rows := map_layout.strip_edges().split("\n")
@@ -148,6 +149,21 @@ func _add_wall(block_name: String, pos: Vector3) -> void:
 	body.add_child(col)
 
 	add_child(body)
+
+func _check_bad_obj_files() -> void:
+	var bad := ObjLoader.get_bad_winding_blocks()
+	if bad.is_empty():
+		return
+	var msg := "Bad face winding detected in OBJ files:\n"
+	for b in bad:
+		msg += "  • %s.obj\n" % b
+	msg += "\nThese blocks will render incorrectly with back-face culling.\nRe-export them from PrismCraft to fix."
+	var dialog := AcceptDialog.new()
+	dialog.title = "OBJ Winding Warning"
+	dialog.dialog_text = msg
+	dialog.min_size = Vector2i(420, 200)
+	get_tree().root.add_child.call_deferred(dialog)
+	dialog.popup_centered.call_deferred()
 
 func _get_mesh(block_name: String) -> ArrayMesh:
 	if _mesh_cache.has(block_name):

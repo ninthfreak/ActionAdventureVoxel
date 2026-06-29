@@ -2,11 +2,16 @@ class_name ObjLoader
 ## Parses OBJ + MTL files at runtime and builds an ArrayMesh with vertex
 ## colors, bypassing Godot's OBJ importer entirely.
 
+static var _bad_winding_blocks: PackedStringArray = []
+
 static func load_block(block_name: String) -> ArrayMesh:
 	var obj_path := "res://blocks/%s.obj" % block_name
 	var mtl_path := "res://blocks/%s.mtl" % block_name
 	var colors := _parse_mtl(mtl_path)
-	return _parse_obj(obj_path, colors)
+	return _parse_obj(obj_path, block_name, colors)
+
+static func get_bad_winding_blocks() -> PackedStringArray:
+	return _bad_winding_blocks
 
 static func _parse_mtl(path: String) -> Dictionary:
 	var colors := {}
@@ -25,7 +30,7 @@ static func _parse_mtl(path: String) -> Dictionary:
 	f.close()
 	return colors
 
-static func _parse_obj(path: String, colors: Dictionary) -> ArrayMesh:
+static func _parse_obj(path: String, block_name: String, colors: Dictionary) -> ArrayMesh:
 	var verts: Array[Vector3] = []
 	var norms: Array[Vector3] = []
 
@@ -33,6 +38,7 @@ static func _parse_obj(path: String, colors: Dictionary) -> ArrayMesh:
 	var tri_n := PackedVector3Array()
 	var tri_c := PackedColorArray()
 
+	var bad_face_count := 0
 	var cur_color := Color.WHITE
 	var f := FileAccess.open(path, FileAccess.READ)
 	if not f:
@@ -65,14 +71,18 @@ static func _parse_obj(path: String, colors: Dictionary) -> ArrayMesh:
 				var n1 := norms[face_n[i]]
 				var n2 := norms[face_n[i + 1]]
 				if (v1 - v0).cross(v2 - v0).dot(n0) > 0.0:
-					var tv := v1; v1 = v2; v2 = tv
-					var tn := n1; n1 = n2; n2 = tn
+					bad_face_count += 1
 				tri_v.append(v0); tri_v.append(v1); tri_v.append(v2)
 				tri_n.append(n0); tri_n.append(n1); tri_n.append(n2)
 				tri_c.append(cur_color)
 				tri_c.append(cur_color)
 				tri_c.append(cur_color)
 	f.close()
+
+	if bad_face_count > 0:
+		push_warning("OBJ winding issue: %s has %d faces with bad winding" % [block_name, bad_face_count])
+		if block_name not in _bad_winding_blocks:
+			_bad_winding_blocks.append(block_name)
 
 	var mesh := ArrayMesh.new()
 	var mat := StandardMaterial3D.new()
