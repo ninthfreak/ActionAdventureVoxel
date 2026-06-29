@@ -6,9 +6,11 @@ extends CanvasLayer
 
 var _panel: PanelContainer
 var _pitch_slider: HSlider
+var _rotate_slider: HSlider
 var _size_slider: HSlider
 var _dist_slider: HSlider
 var _pitch_label: Label
+var _rotate_label: Label
 var _size_label: Label
 var _dist_label: Label
 
@@ -51,6 +53,10 @@ func _build_ui() -> void:
 	_pitch_slider = _add_slider(vbox, _pitch_label, 0.0, 90.0, 0.5)
 	_pitch_slider.value_changed.connect(_on_pitch_changed)
 
+	_rotate_label = Label.new()
+	_rotate_slider = _add_slider(vbox, _rotate_label, -180.0, 180.0, 0.5)
+	_rotate_slider.value_changed.connect(_on_rotate_changed)
+
 	_size_label = Label.new()
 	_size_slider = _add_slider(vbox, _size_label, 2.0, 30.0, 0.5)
 	_size_slider.value_changed.connect(_on_size_changed)
@@ -77,6 +83,7 @@ func _sync_from_rig() -> void:
 	if not rig:
 		return
 	_pitch_slider.set_value_no_signal(rig.camera_pitch_degrees)
+	_rotate_slider.set_value_no_signal(rig.camera_rotate_degrees)
 	_size_slider.set_value_no_signal(rig.camera_view_size)
 	_dist_slider.set_value_no_signal(rig.camera_distance)
 	_update_labels()
@@ -88,6 +95,7 @@ func _get_rig() -> Node:
 
 func _update_labels() -> void:
 	_pitch_label.text = "Pitch: %.1f°" % _pitch_slider.value
+	_rotate_label.text = "Rotate: %.1f°" % _rotate_slider.value
 	_size_label.text = "Zoom: %.1f" % _size_slider.value
 	_dist_label.text = "Distance: %.1f" % _dist_slider.value
 
@@ -95,6 +103,12 @@ func _on_pitch_changed(value: float) -> void:
 	var rig := _get_rig()
 	if rig:
 		rig.camera_pitch_degrees = value
+	_update_labels()
+
+func _on_rotate_changed(value: float) -> void:
+	var rig := _get_rig()
+	if rig:
+		rig.camera_rotate_degrees = value
 	_update_labels()
 
 func _on_size_changed(value: float) -> void:

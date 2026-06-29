@@ -19,6 +19,11 @@ extends Node3D
 		camera_pitch_degrees = value
 		_apply()
 
+@export_range(-180.0, 180.0, 0.5) var camera_rotate_degrees: float = 0.0:
+	set(value):
+		camera_rotate_degrees = value
+		_apply()
+
 @export var camera_distance: float = 18.0:
 	set(value):
 		camera_distance = value
@@ -36,7 +41,7 @@ func _ready() -> void:
 	_apply()
 
 func _apply() -> void:
-	rotation_degrees = Vector3(-camera_pitch_degrees, 0.0, 0.0)
+	rotation_degrees = Vector3(-camera_pitch_degrees, camera_rotate_degrees, 0.0)
 	var cam := get_node_or_null("Camera3D") as Camera3D
 	if cam:
 		cam.position = Vector3(0.0, 0.0, camera_distance)

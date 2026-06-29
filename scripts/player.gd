@@ -11,10 +11,18 @@ extends CharacterBody3D
 @export var gravity: float = 24.0
 
 func _read_input_direction() -> Vector3:
-	var dir := Vector3.ZERO
-	dir.x = Input.get_axis("move_left", "move_right")
-	dir.z = Input.get_axis("move_up", "move_down")
-	return dir.normalized()
+	var raw := Vector3.ZERO
+	raw.x = Input.get_axis("move_left", "move_right")
+	raw.z = Input.get_axis("move_up", "move_down")
+	if raw.length() < 0.01:
+		return Vector3.ZERO
+	var cam_rig := get_node_or_null("../CameraRig")
+	if cam_rig:
+		var yaw := deg_to_rad(cam_rig.camera_rotate_degrees)
+		var c := cos(yaw)
+		var s := sin(yaw)
+		raw = Vector3(raw.x * c - raw.z * s, 0.0, raw.x * s + raw.z * c)
+	return raw.normalized()
 
 func _physics_process(delta: float) -> void:
 	var input_dir := _read_input_direction()
