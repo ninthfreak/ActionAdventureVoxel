@@ -76,7 +76,7 @@ static func _parse_obj(path: String, colors: Dictionary) -> ArrayMesh:
 
 	var mat := StandardMaterial3D.new()
 	mat.vertex_color_use_as_albedo = true
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	mesh.surface_set_material(0, mat)
 
 	return mesh
