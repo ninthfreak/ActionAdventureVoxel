@@ -92,12 +92,12 @@ center_map = true
 
 [node name="KeyLight" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 10, 0)
-light_energy = 0.9
+light_energy = 1.4
 shadow_enabled = true
 
 [node name="FillLight" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, -0.259, -0.966, 0, 0.966, -0.259, 0, 10, 0)
-light_energy = 0.35
+light_energy = 0.6
 shadow_enabled = false
 
 [node name="Player" type="CharacterBody3D" parent="."]
@@ -116,8 +116,8 @@ shape = SubResource("Shape_player")
 
 [node name="CameraRig" type="Node3D" parent="."]
 script = ExtResource("2_camrig")
-camera_pitch_degrees = 55.0
-camera_rotate_degrees = 0.0
+camera_pitch_degrees = 35.0
+camera_rotate_degrees = 1.0
 camera_distance = 18.0
 camera_view_size = 14.0
 target_path = NodePath("../Player")
