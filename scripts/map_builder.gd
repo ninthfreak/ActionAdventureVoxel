@@ -16,25 +16,11 @@ const BLOCK_KEY := {
 
 const WALL_TILES := ["B"]
 
-# Average fill color per block type — backs the voxel mesh so sub-pixel
-# gaps between tiny quads show a matching color instead of the sky.
-const FILL_COLORS := {
-	"grass":             Color(0.40, 0.48, 0.30),
-	"dirt":              Color(0.42, 0.32, 0.22),
-	"sand":              Color(0.72, 0.64, 0.42),
-	"water":             Color(0.22, 0.34, 0.50),
-	"asphalt":           Color(0.28, 0.28, 0.28),
-	"gravel":            Color(0.46, 0.44, 0.38),
-	"concrete_walkway":  Color(0.62, 0.60, 0.56),
-	"bricks":            Color(0.52, 0.30, 0.24),
-	"cement_blocks":     Color(0.56, 0.54, 0.50),
-}
-
 @export_multiline var map_layout: String
 @export var center_map: bool = true
 
 var _mesh_cache: Dictionary = {}
-var _fill_cache: Dictionary = {}
+var _override_cache: Dictionary = {}
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
@@ -73,13 +59,13 @@ func _build() -> void:
 				_add_wall(block_name, Vector3(col_idx, 0.0, row_idx) + offset)
 
 func _add_block(block_name: String, pos: Vector3) -> void:
-	_add_fill_box(block_name, pos)
 	var mesh := _load_mesh(block_name)
 	if not mesh:
 		return
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
 	mi.position = pos
+	_apply_opaque_overrides(mi, block_name)
 	add_child(mi)
 
 func _add_wall(block_name: String, pos: Vector3) -> void:
@@ -90,10 +76,9 @@ func _add_wall(block_name: String, pos: Vector3) -> void:
 	var body := StaticBody3D.new()
 	body.position = pos
 
-	_add_fill_box(block_name, Vector3.ZERO, body)
-
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
+	_apply_opaque_overrides(mi, block_name)
 	body.add_child(mi)
 
 	var col := CollisionShape3D.new()
@@ -105,26 +90,30 @@ func _add_wall(block_name: String, pos: Vector3) -> void:
 
 	add_child(body)
 
-func _add_fill_box(block_name: String, pos: Vector3, parent: Node = null) -> void:
-	if not parent:
-		parent = self
-	var fill := MeshInstance3D.new()
-	fill.mesh = _get_fill_mesh(block_name)
-	fill.position = pos
-	fill.scale = Vector3(0.998, 0.998, 0.998)
-	parent.add_child(fill)
+func _apply_opaque_overrides(mi: MeshInstance3D, block_name: String) -> void:
+	var overrides := _get_overrides(block_name)
+	for i in overrides.size():
+		mi.set_surface_override_material(i, overrides[i])
 
-func _get_fill_mesh(block_name: String) -> BoxMesh:
-	if _fill_cache.has(block_name):
-		return _fill_cache[block_name]
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = FILL_COLORS.get(block_name, Color(0.3, 0.3, 0.3))
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	var bm := BoxMesh.new()
-	bm.size = Vector3(1.0, 1.0, 1.0)
-	bm.material = mat
-	_fill_cache[block_name] = bm
-	return bm
+func _get_overrides(block_name: String) -> Array:
+	if _override_cache.has(block_name):
+		return _override_cache[block_name]
+	var mesh := _load_mesh(block_name)
+	if not mesh:
+		_override_cache[block_name] = []
+		return []
+	var mats: Array = []
+	for i in mesh.get_surface_count():
+		var src := mesh.surface_get_material(i)
+		var fresh := StandardMaterial3D.new()
+		if src is StandardMaterial3D:
+			fresh.albedo_color = Color(src.albedo_color.r, src.albedo_color.g, src.albedo_color.b, 1.0)
+		else:
+			fresh.albedo_color = Color(0.5, 0.5, 0.5, 1.0)
+		fresh.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mats.append(fresh)
+	_override_cache[block_name] = mats
+	return mats
 
 func _load_mesh(block_name: String) -> Mesh:
 	if _mesh_cache.has(block_name):
