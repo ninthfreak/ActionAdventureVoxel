@@ -46,25 +46,33 @@ func _fix_skinning() -> void:
 	]
 
 	var ibm_list := _get_inverse_bind_matrices()
-	var ibm_map := {}
+
+	var used_bones := {}
 	for i in joint_names.size():
-		ibm_map[joint_names[i]] = ibm_list[i]
+		used_bones[skel.find_bone(joint_names[i])] = true
 
 	var bone_count := skel.get_bone_count()
+	var bind_count := maxi(joint_names.size(), bone_count)
 	var skin := Skin.new()
-	skin.set_bind_count(bone_count)
+	skin.set_bind_count(bind_count)
+
+	for i in joint_names.size():
+		var bone_idx := skel.find_bone(joint_names[i])
+		skin.set_bind_bone(i, bone_idx)
+		skin.set_bind_name(i, joint_names[i])
+		skin.set_bind_pose(i, ibm_list[i])
+
+	var extra := joint_names.size()
 	for i in bone_count:
+		if used_bones.has(i):
+			continue
+		if extra >= bind_count:
+			break
 		var bone_name := skel.get_bone_name(i)
-		skin.set_bind_bone(i, i)
-		skin.set_bind_name(i, bone_name)
-		if ibm_map.has(bone_name):
-			skin.set_bind_pose(i, ibm_map[bone_name])
-		else:
-			var rest := skel.get_bone_rest(i)
-			if rest != Transform3D.IDENTITY:
-				skin.set_bind_pose(i, rest.inverse())
-			else:
-				skin.set_bind_pose(i, Transform3D.IDENTITY)
+		skin.set_bind_bone(extra, i)
+		skin.set_bind_name(extra, bone_name)
+		skin.set_bind_pose(extra, skel.get_bone_global_rest(i).inverse())
+		extra += 1
 
 	for child in skel.get_children():
 		if child is MeshInstance3D:
