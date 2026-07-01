@@ -1,10 +1,9 @@
 shader_type spatial;
-render_mode specular_disabled;
+render_mode specular_disabled, ambient_light_disabled;
 
 uniform vec3 albedo : source_color = vec3(1.0);
 uniform float shadow_strength : hint_range(0.0, 1.0) = 0.4;
 uniform int bands : hint_range(2, 5) = 3;
-// Set true on meshes that supply COLOR per-vertex (e.g. the character model).
 uniform bool use_vertex_color = false;
 
 void fragment() {
