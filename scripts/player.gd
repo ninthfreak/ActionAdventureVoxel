@@ -28,6 +28,7 @@ func _spawn_model() -> void:
 	add_child(_model)
 
 	_fix_skinning()
+	_apply_cel_shader()
 	_anim_player = _find_animation_player(_model)
 
 func _fix_skinning() -> void:
@@ -109,6 +110,24 @@ func _get_inverse_bind_matrices() -> Array[Transform3D]:
 	r.append(_ibm([-0.225945,0.005445,0.974125,-0.026978,-0.06438,-0.997882,-0.009355,0.462875,0.97201,-0.064827,0.225817,0.246977,0,0,0,1]))
 	r.append(_ibm([-0.192414,-0.037429,-0.9806,0.039724,0.027893,-0.999077,0.032661,0.611664,-0.980917,-0.021068,0.19328,0.229665,0,0,0,1]))
 	return r
+
+func _apply_cel_shader() -> void:
+	var shader := load("res://shaders/cel.gdshader") as Shader
+	if not shader:
+		return
+	var skel := _model.get_node_or_null("Skeleton3D")
+	if not skel:
+		return
+	for child in skel.get_children():
+		if child is MeshInstance3D:
+			var mesh_inst := child as MeshInstance3D
+			for si in mesh_inst.mesh.get_surface_count():
+				var mat := ShaderMaterial.new()
+				mat.shader = shader
+				mat.set_shader_parameter("use_vertex_color", true)
+				mat.set_shader_parameter("shadow_strength", 0.4)
+				mat.set_shader_parameter("bands", 3)
+				mesh_inst.set_surface_override_material(si, mat)
 
 func _find_animation_player(node: Node) -> AnimationPlayer:
 	for child in node.get_children():
