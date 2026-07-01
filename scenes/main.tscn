@@ -6,7 +6,7 @@
 [ext_resource type="Script" path="res://addons/voxel_engine/voxel_world.gd" id="4_vworld"]
 [ext_resource type="Script" path="res://scripts/block_editor.gd" id="5_editor"]
 [ext_resource type="Script" path="res://scripts/block_editor_ui.gd" id="6_editor_ui"]
-[ext_resource type="PackedScene" path="res://bodies/fem.glb" id="7_fem"]
+[ext_resource type="PackedScene" path="res://bodies/animations/fem.dae" id="7_fem"]
 
 [sub_resource type="CapsuleShape3D" id="Shape_player"]
 radius = 0.3
