@@ -1,13 +1,16 @@
 extends CharacterBody3D
 
-@export var move_speed: float = 6.0
+@export var walk_speed: float = 6.0
+@export var run_speed: float = 12.0
 @export var acceleration: float = 60.0
 @export var turn_speed: float = 12.0
 @export var gravity: float = 24.0
+@export var jump_force: float = 10.0
 
 var _model: Node3D
 var _anim_player: AnimationPlayer
 var _current_anim := ""
+var _is_jumping := false
 
 func _ready() -> void:
 	_spawn_model()
@@ -145,7 +148,10 @@ func _load_mixamo_anims() -> void:
 				if anim:
 					var lib := _anim_player.get_animation_library("")
 					if lib:
-						lib.add_animation(anim_name, anim.duplicate())
+						var dup := anim.duplicate()
+						if anim_name in ["idle", "walking", "running", "falling"]:
+							dup.loop_mode = Animation.LOOP_LINEAR
+						lib.add_animation(anim_name, dup)
 		inst.queue_free()
 
 func _play_anim(anim_name: String) -> void:
@@ -171,13 +177,20 @@ func _read_input_direction() -> Vector3:
 
 func _physics_process(delta: float) -> void:
 	var input_dir := _read_input_direction()
-	var target := input_dir * move_speed
+	var running := Input.is_action_pressed("run")
+	var speed := run_speed if running else walk_speed
+	var target := input_dir * speed
 
 	velocity.x = move_toward(velocity.x, target.x, acceleration * delta)
 	velocity.z = move_toward(velocity.z, target.z, acceleration * delta)
 
 	if is_on_floor():
+		if _is_jumping:
+			_is_jumping = false
 		velocity.y = 0.0
+		if Input.is_action_just_pressed("jump"):
+			velocity.y = jump_force
+			_is_jumping = true
 	else:
 		velocity.y -= gravity * delta
 
@@ -191,10 +204,15 @@ func _physics_process(delta: float) -> void:
 
 func _update_animation() -> void:
 	if not is_on_floor():
-		_play_anim("falling")
+		if _is_jumping and velocity.y > 0.0:
+			_play_anim("jump")
+		else:
+			_play_anim("falling")
 		return
 	var h_speed := Vector2(velocity.x, velocity.z).length()
-	if h_speed > 0.5:
+	if h_speed > run_speed * 0.7:
+		_play_anim("running")
+	elif h_speed > 0.5:
 		_play_anim("walking")
 	else:
 		_play_anim("idle")
