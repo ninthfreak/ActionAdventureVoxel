@@ -86,6 +86,7 @@ func _add_slider(parent: VBoxContainer, label: Label, min_val: float, max_val: f
 	slider.max_value = max_val
 	slider.step = step
 	slider.custom_minimum_size.x = 240.0
+	slider.focus_mode = Control.FOCUS_NONE
 	parent.add_child(slider)
 	return slider
 
