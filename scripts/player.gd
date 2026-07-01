@@ -18,12 +18,24 @@ func _ready() -> void:
 func _spawn_model() -> void:
 	var scene := load("res://bodies/animations/fem.dae") as PackedScene
 	if not scene:
-		push_warning("Could not load player model fem.dae")
+		push_warning("Player: could not load fem.dae")
 		return
 	_model = scene.instantiate() as Node3D
 	_model.scale = Vector3(102, 102, 102)
 	add_child(_model)
 	_anim_player = _find_animation_player(_model)
+	if _anim_player:
+		print("Player: AnimationPlayer found at ", _anim_player.get_path())
+		print("Player: existing anims = ", _anim_player.get_animation_list())
+		print("Player: root node = ", _anim_player.root_node)
+	else:
+		print("Player: NO AnimationPlayer found in model")
+		_print_tree(_model, 0)
+
+func _print_tree(node: Node, depth: int) -> void:
+	print("  ".repeat(depth), node.name, " (", node.get_class(), ")")
+	for child in node.get_children():
+		_print_tree(child, depth + 1)
 
 func _find_animation_player(node: Node) -> AnimationPlayer:
 	for child in node.get_children():
@@ -46,22 +58,38 @@ func _load_mixamo_anims() -> void:
 	for anim_name in anim_files:
 		var path: String = anim_files[anim_name]
 		if not ResourceLoader.exists(path):
+			print("Player: anim file not found: ", path)
 			continue
 		var scene := load(path) as PackedScene
 		if not scene:
+			print("Player: could not load anim scene: ", path)
 			continue
 		var inst := scene.instantiate()
 		var src_player := _find_animation_player(inst)
-		if src_player:
-			for src_name in src_player.get_animation_list():
-				if src_name == "RESET":
-					continue
-				var anim := src_player.get_animation(src_name)
-				if anim:
-					var lib := _anim_player.get_animation_library("")
-					if lib:
-						lib.add_animation(anim_name, anim.duplicate())
+		if not src_player:
+			print("Player: no AnimationPlayer in ", path)
+			_print_tree(inst, 1)
+			inst.queue_free()
+			continue
+		print("Player: loading ", anim_name, " from ", path)
+		print("  source anims: ", src_player.get_animation_list())
+		for src_name in src_player.get_animation_list():
+			if src_name == "RESET":
+				continue
+			var anim := src_player.get_animation(src_name)
+			if not anim:
+				continue
+			print("  tracks in '", src_name, "': ", anim.get_track_count())
+			for t in range(mini(anim.get_track_count(), 3)):
+				print("    track ", t, ": ", anim.track_get_path(t))
+			var lib := _anim_player.get_animation_library("")
+			if lib:
+				lib.add_animation(anim_name, anim.duplicate())
+				print("  added as '", anim_name, "'")
+			else:
+				print("  no default animation library!")
 		inst.queue_free()
+	print("Player: final animation list = ", _anim_player.get_animation_list())
 
 func _play_anim(anim_name: String) -> void:
 	if not _anim_player or _current_anim == anim_name:
