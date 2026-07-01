@@ -12,23 +12,6 @@ var _current_anim := ""
 func _ready() -> void:
 	_spawn_model()
 	if _anim_player:
-		var skel := _model.get_node_or_null("Skeleton3D") as Skeleton3D
-		if skel:
-			print("Player: Skeleton3D has ", skel.get_bone_count(), " bones")
-			for i in range(mini(skel.get_bone_count(), 5)):
-				print("  bone ", i, ": ", skel.get_bone_name(i))
-		var mesh_inst := _model.get_node_or_null("Skeleton3D/unamed") as MeshInstance3D
-		if mesh_inst:
-			print("Player: MeshInstance3D skin = ", mesh_inst.skin)
-			print("Player: MeshInstance3D skeleton = ", mesh_inst.skeleton)
-			var mesh := mesh_inst.mesh
-			if mesh:
-				print("Player: mesh surface count = ", mesh.get_surface_count())
-				for s in range(mesh.get_surface_count()):
-					var arrays := mesh.surface_get_arrays(s)
-					var bones = arrays[Mesh.ARRAY_BONES]
-					var weights = arrays[Mesh.ARRAY_WEIGHTS]
-					print("  surface ", s, ": bones=", typeof(bones) != TYPE_NIL, " weights=", typeof(weights) != TYPE_NIL)
 		_load_mixamo_anims()
 		_play_anim("idle")
 
@@ -40,26 +23,19 @@ func _spawn_model() -> void:
 	_model = scene.instantiate() as Node3D
 	_model.scale = Vector3(102, 102, 102)
 	add_child(_model)
-	_anim_player = _find_animation_player(_model)
-	if _anim_player:
-		print("Player: AnimationPlayer found at ", _anim_player.get_path())
-		print("Player: existing anims = ", _anim_player.get_animation_list())
-		print("Player: root node = ", _anim_player.root_node)
-		var default_anim := _anim_player.get_animation("default")
-		if default_anim:
-			print("Player: 'default' anim tracks:")
-			for t in range(mini(default_anim.get_track_count(), 5)):
-				print("  track ", t, ": ", default_anim.track_get_path(t))
-		print("Player: model scene tree:")
-		_print_tree(_model, 1)
-	else:
-		print("Player: NO AnimationPlayer found in model")
-		_print_tree(_model, 0)
 
-func _print_tree(node: Node, depth: int) -> void:
-	print("  ".repeat(depth), node.name, " (", node.get_class(), ")")
-	for child in node.get_children():
-		_print_tree(child, depth + 1)
+	_fix_skinning()
+	_anim_player = _find_animation_player(_model)
+
+func _fix_skinning() -> void:
+	var skel := _model.get_node_or_null("Skeleton3D") as Skeleton3D
+	if not skel:
+		return
+	var skin := skel.create_skin_from_rest_transforms()
+	for child in skel.get_children():
+		if child is MeshInstance3D:
+			child.skeleton = child.get_path_to(skel)
+			child.skin = skin
 
 func _find_animation_player(node: Node) -> AnimationPlayer:
 	for child in node.get_children():
@@ -82,59 +58,32 @@ func _load_mixamo_anims() -> void:
 	for anim_name in anim_files:
 		var path: String = anim_files[anim_name]
 		if not ResourceLoader.exists(path):
-			print("Player: anim file not found: ", path)
 			continue
 		var res := load(path)
 		if not res:
-			print("Player: load() returned null for: ", path)
 			continue
-		print("Player: loaded ", path, " as ", res.get_class())
 		var scene := res as PackedScene
 		if not scene:
-			if res is Animation:
-				print("Player: it's a raw Animation, adding directly")
-				var lib := _anim_player.get_animation_library("")
-				if lib:
-					lib.add_animation(anim_name, res.duplicate())
-			else:
-				print("Player: unexpected type, skipping")
 			continue
 		var inst := scene.instantiate()
 		var src_player := _find_animation_player(inst)
-		if not src_player:
-			print("Player: no AnimationPlayer in ", path)
-			_print_tree(inst, 1)
-			inst.queue_free()
-			continue
-		print("Player: loading ", anim_name, " from ", path)
-		print("  source anims: ", src_player.get_animation_list())
-		for src_name in src_player.get_animation_list():
-			if src_name == "RESET":
-				continue
-			var anim := src_player.get_animation(src_name)
-			if not anim:
-				continue
-			print("  tracks in '", src_name, "': ", anim.get_track_count())
-			for t in range(mini(anim.get_track_count(), 3)):
-				print("    track ", t, ": ", anim.track_get_path(t))
-			var lib := _anim_player.get_animation_library("")
-			if lib:
-				lib.add_animation(anim_name, anim.duplicate())
-				print("  added as '", anim_name, "'")
-			else:
-				print("  no default animation library!")
+		if src_player:
+			for src_name in src_player.get_animation_list():
+				if src_name == "RESET":
+					continue
+				var anim := src_player.get_animation(src_name)
+				if anim:
+					var lib := _anim_player.get_animation_library("")
+					if lib:
+						lib.add_animation(anim_name, anim.duplicate())
 		inst.queue_free()
-	print("Player: final animation list = ", _anim_player.get_animation_list())
 
 func _play_anim(anim_name: String) -> void:
 	if not _anim_player or _current_anim == anim_name:
 		return
 	if _anim_player.has_animation(anim_name):
-		print("Player: playing '", anim_name, "'")
 		_anim_player.play(anim_name)
 		_current_anim = anim_name
-		await get_tree().create_timer(0.1).timeout
-		print("Player: is_playing=", _anim_player.is_playing(), " current=", _anim_player.current_animation, " pos=", _anim_player.current_animation_position)
 
 func _read_input_direction() -> Vector3:
 	var raw := Vector3.ZERO
