@@ -60,9 +60,20 @@ func _load_mixamo_anims() -> void:
 		if not ResourceLoader.exists(path):
 			print("Player: anim file not found: ", path)
 			continue
-		var scene := load(path) as PackedScene
+		var res := load(path)
+		if not res:
+			print("Player: load() returned null for: ", path)
+			continue
+		print("Player: loaded ", path, " as ", res.get_class())
+		var scene := res as PackedScene
 		if not scene:
-			print("Player: could not load anim scene: ", path)
+			if res is Animation:
+				print("Player: it's a raw Animation, adding directly")
+				var lib := _anim_player.get_animation_library("")
+				if lib:
+					lib.add_animation(anim_name, res.duplicate())
+			else:
+				print("Player: unexpected type, skipping")
 			continue
 		var inst := scene.instantiate()
 		var src_player := _find_animation_player(inst)
