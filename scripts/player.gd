@@ -28,6 +28,13 @@ func _spawn_model() -> void:
 		print("Player: AnimationPlayer found at ", _anim_player.get_path())
 		print("Player: existing anims = ", _anim_player.get_animation_list())
 		print("Player: root node = ", _anim_player.root_node)
+		var default_anim := _anim_player.get_animation("default")
+		if default_anim:
+			print("Player: 'default' anim tracks:")
+			for t in range(mini(default_anim.get_track_count(), 5)):
+				print("  track ", t, ": ", default_anim.track_get_path(t))
+		print("Player: model scene tree:")
+		_print_tree(_model, 1)
 	else:
 		print("Player: NO AnimationPlayer found in model")
 		_print_tree(_model, 0)
