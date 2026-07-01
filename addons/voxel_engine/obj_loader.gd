@@ -3,10 +3,11 @@ class_name ObjLoader
 ## colors, bypassing Godot's OBJ importer entirely.
 
 static var _bad_winding_blocks: PackedStringArray = []
+static var blocks_directory := "res://blocks"
 
 static func load_block(block_name: String) -> ArrayMesh:
-	var obj_path := "res://blocks/%s.obj" % block_name
-	var mtl_path := "res://blocks/%s.mtl" % block_name
+	var obj_path := "%s/%s.obj" % [blocks_directory, block_name]
+	var mtl_path := "%s/%s.mtl" % [blocks_directory, block_name]
 	var colors := _parse_mtl(mtl_path)
 	return _parse_obj(obj_path, block_name, colors)
 

@@ -97,7 +97,7 @@ func _rebuild_chunk(ck: Vector3i) -> void:
 		_chunks.erase(ck)
 		return
 
-	var node := preload("res://scripts/voxel/chunk_node.gd").new()
+	var node := preload("res://addons/voxel_engine/chunk_node.gd").new()
 	node.chunk_key = ck
 	node.data = chunk
 	node.position = Vector3(ck.x * ChunkData.SIZE, ck.y * ChunkData.SIZE, ck.z * ChunkData.SIZE)
