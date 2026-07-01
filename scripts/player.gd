@@ -21,6 +21,7 @@ func _spawn_model() -> void:
 		push_warning("Could not load player model fem.dae")
 		return
 	_model = scene.instantiate() as Node3D
+	_model.scale = Vector3(102, 102, 102)
 	add_child(_model)
 	_anim_player = _find_animation_player(_model)
 
