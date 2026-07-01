@@ -86,10 +86,21 @@ static func _parse_obj(path: String, block_name: String, colors: Dictionary) -> 
 			_bad_winding_blocks.append(block_name)
 
 	var mesh := ArrayMesh.new()
-	var mat := StandardMaterial3D.new()
-	mat.vertex_color_use_as_albedo = true
-	mat.roughness = 1.0
-	mat.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
+	var mat: Material
+	var cel_shader := load("res://shaders/cel.gdshader") as Shader
+	if cel_shader:
+		var sm := ShaderMaterial.new()
+		sm.shader = cel_shader
+		sm.set_shader_parameter("use_vertex_color", true)
+		sm.set_shader_parameter("shadow_strength", 0.4)
+		sm.set_shader_parameter("bands", 3)
+		mat = sm
+	else:
+		var std := StandardMaterial3D.new()
+		std.vertex_color_use_as_albedo = true
+		std.roughness = 1.0
+		std.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
+		mat = std
 
 	var total := tri_v.size()
 	var chunk := 60000
