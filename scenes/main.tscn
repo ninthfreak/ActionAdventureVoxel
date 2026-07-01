@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/camera_rig.gd" id="2_camrig"]
@@ -6,8 +6,6 @@
 [ext_resource type="Script" path="res://addons/voxel_engine/voxel_world.gd" id="4_vworld"]
 [ext_resource type="Script" path="res://scripts/block_editor.gd" id="5_editor"]
 [ext_resource type="Script" path="res://scripts/block_editor_ui.gd" id="6_editor_ui"]
-[ext_resource type="PackedScene" path="res://bodies/animations/fem.dae" id="7_fem"]
-
 [sub_resource type="CapsuleShape3D" id="Shape_player"]
 radius = 0.3
 height = 1.4
@@ -146,8 +144,6 @@ shadow_enabled = true
 [node name="Player" type="CharacterBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 script = ExtResource("1_player")
-
-[node name="Model" parent="Player" instance=ExtResource("7_fem")]
 
 [node name="Collision" type="CollisionShape3D" parent="Player"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)

@@ -1,19 +1,28 @@
 extends CharacterBody3D
 
 @export var move_speed: float = 6.0
-@export var run_speed: float = 10.0
 @export var acceleration: float = 60.0
 @export var turn_speed: float = 12.0
 @export var gravity: float = 24.0
 
+var _model: Node3D
 var _anim_player: AnimationPlayer
 var _current_anim := ""
 
 func _ready() -> void:
-	_anim_player = _find_animation_player(self)
+	_spawn_model()
 	if _anim_player:
 		_load_mixamo_anims()
 		_play_anim("idle")
+
+func _spawn_model() -> void:
+	var scene := load("res://bodies/animations/fem.dae") as PackedScene
+	if not scene:
+		push_warning("Could not load player model fem.dae")
+		return
+	_model = scene.instantiate() as Node3D
+	add_child(_model)
+	_anim_player = _find_animation_player(_model)
 
 func _find_animation_player(node: Node) -> AnimationPlayer:
 	for child in node.get_children():
@@ -37,14 +46,13 @@ func _load_mixamo_anims() -> void:
 		var path: String = anim_files[anim_name]
 		if not ResourceLoader.exists(path):
 			continue
-		var scene := ResourceLoader.load(path) as PackedScene
+		var scene := load(path) as PackedScene
 		if not scene:
 			continue
 		var inst := scene.instantiate()
 		var src_player := _find_animation_player(inst)
 		if src_player:
-			var anim_list := src_player.get_animation_list()
-			for src_name in anim_list:
+			for src_name in src_player.get_animation_list():
 				if src_name == "RESET":
 					continue
 				var anim := src_player.get_animation(src_name)
@@ -55,9 +63,7 @@ func _load_mixamo_anims() -> void:
 		inst.queue_free()
 
 func _play_anim(anim_name: String) -> void:
-	if not _anim_player:
-		return
-	if _current_anim == anim_name:
+	if not _anim_player or _current_anim == anim_name:
 		return
 	if _anim_player.has_animation(anim_name):
 		_anim_player.play(anim_name)
@@ -79,8 +85,7 @@ func _read_input_direction() -> Vector3:
 
 func _physics_process(delta: float) -> void:
 	var input_dir := _read_input_direction()
-	var speed := move_speed
-	var target := input_dir * speed
+	var target := input_dir * move_speed
 
 	velocity.x = move_toward(velocity.x, target.x, acceleration * delta)
 	velocity.z = move_toward(velocity.z, target.z, acceleration * delta)
