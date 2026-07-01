@@ -12,6 +12,11 @@ var _current_anim := ""
 func _ready() -> void:
 	_spawn_model()
 	if _anim_player:
+		print("Player: trying 'default' animation first...")
+		_anim_player.play("default")
+		await get_tree().create_timer(2.0).timeout
+		print("Player: default played? is_playing=", _anim_player.is_playing())
+		_anim_player.stop()
 		_load_mixamo_anims()
 		_play_anim("idle")
 
@@ -113,8 +118,11 @@ func _play_anim(anim_name: String) -> void:
 	if not _anim_player or _current_anim == anim_name:
 		return
 	if _anim_player.has_animation(anim_name):
+		print("Player: playing '", anim_name, "'")
 		_anim_player.play(anim_name)
 		_current_anim = anim_name
+		await get_tree().create_timer(0.1).timeout
+		print("Player: is_playing=", _anim_player.is_playing(), " current=", _anim_player.current_animation, " pos=", _anim_player.current_animation_position)
 
 func _read_input_direction() -> Vector3:
 	var raw := Vector3.ZERO
