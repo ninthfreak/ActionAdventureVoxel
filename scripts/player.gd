@@ -12,11 +12,23 @@ var _current_anim := ""
 func _ready() -> void:
 	_spawn_model()
 	if _anim_player:
-		print("Player: trying 'default' animation first...")
-		_anim_player.play("default")
-		await get_tree().create_timer(2.0).timeout
-		print("Player: default played? is_playing=", _anim_player.is_playing())
-		_anim_player.stop()
+		var skel := _model.get_node_or_null("Skeleton3D") as Skeleton3D
+		if skel:
+			print("Player: Skeleton3D has ", skel.get_bone_count(), " bones")
+			for i in range(mini(skel.get_bone_count(), 5)):
+				print("  bone ", i, ": ", skel.get_bone_name(i))
+		var mesh_inst := _model.get_node_or_null("Skeleton3D/unamed") as MeshInstance3D
+		if mesh_inst:
+			print("Player: MeshInstance3D skin = ", mesh_inst.skin)
+			print("Player: MeshInstance3D skeleton = ", mesh_inst.skeleton)
+			var mesh := mesh_inst.mesh
+			if mesh:
+				print("Player: mesh surface count = ", mesh.get_surface_count())
+				for s in range(mesh.get_surface_count()):
+					var arrays := mesh.surface_get_arrays(s)
+					var bones = arrays[Mesh.ARRAY_BONES]
+					var weights = arrays[Mesh.ARRAY_WEIGHTS]
+					print("  surface ", s, ": bones=", typeof(bones) != TYPE_NIL, " weights=", typeof(weights) != TYPE_NIL)
 		_load_mixamo_anims()
 		_play_anim("idle")
 
