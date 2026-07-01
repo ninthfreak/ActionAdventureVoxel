@@ -7,8 +7,8 @@
 [ext_resource type="Script" path="res://scripts/block_editor.gd" id="5_editor"]
 [ext_resource type="Script" path="res://scripts/block_editor_ui.gd" id="6_editor_ui"]
 [sub_resource type="CapsuleShape3D" id="Shape_player"]
-radius = 0.3
-height = 1.4
+radius = 0.35
+height = 1.7
 
 [sub_resource type="BoxShape3D" id="Shape_ground"]
 size = Vector3(200, 1, 200)
