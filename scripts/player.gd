@@ -31,7 +31,30 @@ func _fix_skinning() -> void:
 	var skel := _model.get_node_or_null("Skeleton3D") as Skeleton3D
 	if not skel:
 		return
-	var skin := skel.create_skin_from_rest_transforms()
+
+	var joint_order: Array[String] = [
+		"mixamorig_RightLeg", "mixamorig_RightFoot", "mixamorig_RightToeBase",
+		"mixamorig_LeftFoot", "mixamorig_LeftToeBase", "mixamorig_LeftLeg",
+		"mixamorig_LeftUpLeg", "mixamorig_RightUpLeg", "mixamorig_Hips",
+		"mixamorig_Spine", "mixamorig_Spine1", "mixamorig_Spine2",
+		"mixamorig_RightArm", "mixamorig_RightShoulder", "mixamorig_LeftShoulder",
+		"mixamorig_LeftArm", "mixamorig_LeftHand", "mixamorig_Neck",
+		"mixamorig_Head", "mixamorig_RightHandIndex2", "mixamorig_RightHandIndex3",
+		"mixamorig_LeftHandIndex2", "mixamorig_LeftHandIndex3",
+		"mixamorig_LeftHandIndex1", "mixamorig_RightHandIndex1",
+		"mixamorig_RightHand", "mixamorig_LeftForeArm",
+	]
+
+	var skin := Skin.new()
+	skin.set_bind_count(joint_order.size())
+	for i in joint_order.size():
+		var bone_name := joint_order[i]
+		var bone_idx := skel.find_bone(bone_name)
+		skin.set_bind_bone(i, bone_idx)
+		skin.set_bind_name(i, bone_name)
+		if bone_idx >= 0:
+			skin.set_bind_pose(i, skel.get_bone_rest(bone_idx).inverse())
+
 	for child in skel.get_children():
 		if child is MeshInstance3D:
 			child.skeleton = child.get_path_to(skel)
