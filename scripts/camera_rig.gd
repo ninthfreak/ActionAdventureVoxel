@@ -37,6 +37,9 @@ extends Node3D
 ## What the camera follows at runtime (the Player). Leave empty to stay put.
 @export var target_path: NodePath
 
+## Degrees per second when rotating with the gamepad right stick.
+@export var camera_rotate_speed: float = 150.0
+
 func _ready() -> void:
 	_apply()
 
@@ -49,9 +52,12 @@ func _apply() -> void:
 		cam.projection = Camera3D.PROJECTION_ORTHOGONAL
 		cam.size = camera_view_size
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if Engine.is_editor_hint():
 		return
+	var turn := Input.get_axis("camera_left", "camera_right")
+	if absf(turn) > 0.0:
+		camera_rotate_degrees = wrapf(camera_rotate_degrees - turn * camera_rotate_speed * delta, -180.0, 180.0)
 	if target_path.is_empty():
 		return
 	var t := get_node_or_null(target_path) as Node3D

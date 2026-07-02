@@ -24,6 +24,8 @@ func _ready() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_tuner"):
 		_panel.visible = not _panel.visible
+		if _panel.visible:
+			_sync_from_rig()
 		get_viewport().set_input_as_handled()
 
 func _build_ui() -> void:

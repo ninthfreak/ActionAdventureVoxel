@@ -11,8 +11,11 @@ var _model: Node3D
 var _anim_player: AnimationPlayer
 var _current_anim := ""
 var _is_jumping := false
+var _cutaway := 0.0
+var _voxel_world: Node
 
 func _ready() -> void:
+	_voxel_world = get_node_or_null("../VoxelWorld")
 	_spawn_model()
 	if _anim_player:
 		_load_mixamo_anims()
@@ -188,10 +191,9 @@ func _read_input_direction() -> Vector3:
 		return Vector3.ZERO
 	var cam_rig := get_node_or_null("../CameraRig")
 	if cam_rig:
-		var yaw := deg_to_rad(cam_rig.camera_rotate_degrees)
-		var c := cos(yaw)
-		var s := sin(yaw)
-		raw = Vector3(raw.x * c - raw.z * s, 0.0, raw.x * s + raw.z * c)
+		# rotate screen-space input by the camera's yaw so "up" is always
+		# away from the camera, whatever direction it faces
+		raw = Basis(Vector3.UP, deg_to_rad(cam_rig.camera_rotate_degrees)) * raw
 	return raw.normalized()
 
 func _physics_process(delta: float) -> void:
@@ -225,6 +227,24 @@ func _physics_process(delta: float) -> void:
 		rotation.y = lerp_angle(rotation.y, desired_yaw, clampf(turn_speed * delta, 0.0, 1.0))
 
 	_update_animation()
+	_update_cutaway(delta)
+
+## When something solid is overhead (i.e. we're indoors), fade in the
+## cutaway global that the cel shader uses to dither away roof and walls.
+func _update_cutaway(delta: float) -> void:
+	var target := 0.0
+	if _voxel_world:
+		var px := floori(global_position.x)
+		var pz := floori(global_position.z)
+		var py := floori(global_position.y) + 2
+		for y in range(py, py + 14):
+			var id: int = _voxel_world.get_block(px, y, pz)
+			if id != BlockRegistry.AIR and BlockRegistry.has_collision(id):
+				target = 1.0
+				break
+	_cutaway = move_toward(_cutaway, target, delta * 4.0)
+	RenderingServer.global_shader_parameter_set("voxel_cutaway", _cutaway)
+	RenderingServer.global_shader_parameter_set("voxel_player_pos", global_position + Vector3(0.0, 1.0, 0.0))
 
 func _update_animation() -> void:
 	if not is_on_floor():
