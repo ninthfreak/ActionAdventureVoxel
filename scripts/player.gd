@@ -130,6 +130,10 @@ func _apply_cel_shader() -> void:
 				mat.set_shader_parameter("use_vertex_color", true)
 				mat.set_shader_parameter("shadow_strength", 0.4)
 				mat.set_shader_parameter("bands", 3)
+				# sprite-style: one flat shade for the whole character and no
+				# received shadows — both flicker sources on animated models
+				mat.set_shader_parameter("normal_flatten", 1.0)
+				mat.set_shader_parameter("receive_shadows", false)
 				mesh_inst.set_surface_override_material(si, mat)
 
 func _find_animation_player(node: Node) -> AnimationPlayer:
