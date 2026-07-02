@@ -43,7 +43,8 @@ func build() -> void:
 		if not BlockRegistry.has_collision(id):
 			continue
 		for pos in groups[id]:
-			collision_positions.append(pos)
+			if _is_exposed(int(pos.x), int(pos.y), int(pos.z)):
+				collision_positions.append(pos)
 
 	if not collision_positions.is_empty():
 		var body := StaticBody3D.new()
@@ -55,3 +56,20 @@ func build() -> void:
 			col.position = pos + Vector3(0.0, 0.5, 0.0)
 			body.add_child(col)
 		add_child(body)
+
+## A block needs a collision shape only if some face touches a non-solid
+## neighbor. Out-of-chunk neighbors count as exposed to keep seams safe.
+func _is_exposed(x: int, y: int, z: int) -> bool:
+	for offset: Vector3i in [
+		Vector3i(1, 0, 0), Vector3i(-1, 0, 0),
+		Vector3i(0, 1, 0), Vector3i(0, -1, 0),
+		Vector3i(0, 0, 1), Vector3i(0, 0, -1),
+	]:
+		var nx := x + offset.x
+		var ny := y + offset.y
+		var nz := z + offset.z
+		if nx < 0 or nx >= ChunkData.SIZE or ny < 0 or ny >= ChunkData.SIZE or nz < 0 or nz >= ChunkData.SIZE:
+			return true
+		if not BlockRegistry.has_collision(data.get_block(nx, ny, nz)):
+			return true
+	return false

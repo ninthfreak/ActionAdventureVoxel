@@ -2,9 +2,7 @@ extends Node3D
 
 const SAVE_PATH := "user://maps/world.vxel"
 
-@export_multiline var fallback_map_layout: String
-@export_multiline var fallback_struct_layout: String
-@export var fallback_center_map: bool = true
+@export var gen_params: MapGenParams
 
 var _chunks: Dictionary = {}
 var _chunk_nodes: Dictionary = {}
@@ -12,11 +10,27 @@ var _chunk_nodes: Dictionary = {}
 func _ready() -> void:
 	if Engine.is_editor_hint():
 		return
+	var params := _get_params()
 	var err := VoxelSave.load_world(self, SAVE_PATH)
-	if err != OK and not fallback_map_layout.strip_edges().is_empty():
-		MapMigrator.migrate(self, fallback_map_layout, fallback_struct_layout, fallback_center_map)
-		VoxelSave.save_world(self, SAVE_PATH)
+	var up_to_date := err == OK \
+		and int(VoxelSave.last_meta.get("gen_version", 0)) == MapGenerator.GEN_VERSION \
+		and int(VoxelSave.last_meta.get("params_hash", 0)) == params.hash_value()
+	if not up_to_date:
+		clear_world()
+		MapGenerator.generate(self, params)
+		save()
 	_check_bad_obj_files.call_deferred()
+
+func _get_params() -> MapGenParams:
+	if gen_params:
+		return gen_params
+	return MapGenParams.new()
+
+func clear_world() -> void:
+	for ck in _chunk_nodes:
+		_chunk_nodes[ck].queue_free()
+	_chunk_nodes.clear()
+	_chunks.clear()
 
 func _check_bad_obj_files() -> void:
 	var bad := ObjLoader.get_bad_winding_blocks()
@@ -39,7 +53,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func save() -> void:
-	VoxelSave.save_world(self, SAVE_PATH)
+	VoxelSave.save_world(self, SAVE_PATH, {
+		"gen_version": MapGenerator.GEN_VERSION,
+		"params_hash": _get_params().hash_value(),
+	})
 
 func get_block(wx: int, wy: int, wz: int) -> int:
 	var ck := _world_to_chunk_key(wx, wy, wz)

@@ -215,6 +215,11 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 
+	# fell off the map — respawn at town center
+	if global_position.y < -30.0:
+		global_position = Vector3(0.5, 3.0, 0.5)
+		velocity = Vector3.ZERO
+
 	if input_dir.length() > 0.1:
 		var desired_yaw := atan2(input_dir.x, input_dir.z)
 		rotation.y = lerp_angle(rotation.y, desired_yaw, clampf(turn_speed * delta, 0.0, 1.0))
