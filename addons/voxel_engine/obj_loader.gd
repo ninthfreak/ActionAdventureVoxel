@@ -94,6 +94,7 @@ static func _parse_obj(path: String, block_name: String, colors: Dictionary) -> 
 		sm.set_shader_parameter("use_vertex_color", true)
 		sm.set_shader_parameter("shadow_strength", 0.4)
 		sm.set_shader_parameter("bands", 3)
+		sm.set_shader_parameter("cutaway_affected", true)
 		mat = sm
 	else:
 		var std := StandardMaterial3D.new()

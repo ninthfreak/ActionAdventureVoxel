@@ -8,8 +8,37 @@ uniform bool use_vertex_color = false;
 // Sprite-artist palette trick: lit pixels lean warm, shadowed pixels lean cool.
 uniform vec3 lit_tint : source_color = vec3(1.0, 0.97, 0.89);
 uniform vec3 shadow_tint : source_color = vec3(0.78, 0.84, 1.0);
+// Opt-in per material (world blocks yes, the character no).
+uniform bool cutaway_affected = false;
+
+// Driven from player.gd: 1.0 while the player is indoors.
+global uniform float voxel_cutaway;
+global uniform vec3 voxel_player_pos;
 
 void fragment() {
+	if (cutaway_affected && voxel_cutaway > 0.001) {
+		vec3 wp = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
+		float fade = 0.0;
+		// roof and upper walls near the player
+		if (wp.y > voxel_player_pos.y + 0.6 && distance(wp.xz, voxel_player_pos.xz) < 12.0) {
+			fade = 1.0;
+		}
+		// wall between the camera and the player
+		vec3 to_cam = normalize(CAMERA_POSITION_WORLD - voxel_player_pos);
+		vec3 rel = wp - voxel_player_pos;
+		float t = dot(rel, to_cam);
+		if (t > 0.8 && length(rel - to_cam * t) < 1.4) {
+			fade = 1.0;
+		}
+		fade *= voxel_cutaway;
+		if (fade > 0.0) {
+			// screen-door dither: keeps ~15% of pixels, no depth sorting issues
+			float dither = fract(52.9829189 * fract(dot(FRAGCOORD.xy, vec2(0.06711056, 0.00583715))));
+			if (dither < fade * 0.85) {
+				discard;
+			}
+		}
+	}
 	ALBEDO = use_vertex_color ? COLOR.rgb : albedo;
 	ROUGHNESS = 1.0;
 	SPECULAR = 0.0;
