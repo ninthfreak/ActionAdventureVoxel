@@ -1,6 +1,9 @@
 class_name VoxelSave
 
-static func save_world(world: Node, path: String) -> Error:
+## Metadata (e.g. gen_version) from the most recent successful load_world call.
+static var last_meta: Dictionary = {}
+
+static func save_world(world: Node, path: String, meta: Dictionary = {}) -> Error:
 	var dir_path := path.get_base_dir()
 	if not DirAccess.dir_exists_absolute(dir_path):
 		DirAccess.make_dir_recursive_absolute(dir_path)
@@ -22,6 +25,7 @@ static func save_world(world: Node, path: String) -> Error:
 		"palette": palette,
 		"chunks": chunks_dict,
 	}
+	save_data.merge(meta)
 
 	var json_str := JSON.stringify(save_data, "  ")
 	var f := FileAccess.open(path, FileAccess.WRITE)
@@ -49,6 +53,7 @@ static func load_world(world: Node, path: String) -> Error:
 	var save_data: Dictionary = json.data
 	var palette: Array = save_data.get("palette", [])
 	var chunks_dict: Dictionary = save_data.get("chunks", {})
+	last_meta = {"gen_version": int(save_data.get("gen_version", 0))}
 
 	var id_remap: Array[int] = []
 	for i in palette.size():
