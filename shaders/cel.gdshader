@@ -10,6 +10,11 @@ uniform vec3 lit_tint : source_color = vec3(1.0, 0.97, 0.89);
 uniform vec3 shadow_tint : source_color = vec3(0.78, 0.84, 1.0);
 // Opt-in per material (world blocks yes, the character no).
 uniform bool cutaway_affected = false;
+// 1.0 = shade the whole mesh as if it faced straight up (sprite-style flat
+// lighting). Kills normal-driven band flicker on animated models.
+uniform float normal_flatten : hint_range(0.0, 1.0) = 0.0;
+// Off = ignore cast shadows (use for characters — stops shadow-map shimmer).
+uniform bool receive_shadows = true;
 
 // Driven from player.gd: 1.0 while the player is indoors.
 global uniform float voxel_cutaway;
@@ -42,6 +47,10 @@ void fragment() {
 	ALBEDO = use_vertex_color ? COLOR.rgb : albedo;
 	ROUGHNESS = 1.0;
 	SPECULAR = 0.0;
+	if (normal_flatten > 0.001) {
+		vec3 up_view = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
+		NORMAL = normalize(mix(NORMAL, up_view, normal_flatten));
+	}
 }
 
 void light() {
@@ -52,7 +61,7 @@ void light() {
 	float aa = clamp(fwidth(x), 0.001, 0.45);
 	float stepped = clamp((floor(x) + smoothstep(0.5 - aa, 0.5 + aa, fract(x))) / float(bands), 0.0, 1.0);
 	// Cast shadows snap toward the shadow band with a soft edge.
-	float shadow = smoothstep(0.25, 0.75, ATTENUATION);
+	float shadow = receive_shadows ? smoothstep(0.25, 0.75, ATTENUATION) : 1.0;
 	float s = stepped * shadow;
 	vec3 shade = mix(shadow_tint * (1.0 - shadow_strength), lit_tint, s);
 	DIFFUSE_LIGHT = ALBEDO * shade;
