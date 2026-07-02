@@ -53,7 +53,10 @@ static func load_world(world: Node, path: String) -> Error:
 	var save_data: Dictionary = json.data
 	var palette: Array = save_data.get("palette", [])
 	var chunks_dict: Dictionary = save_data.get("chunks", {})
-	last_meta = {"gen_version": int(save_data.get("gen_version", 0))}
+	last_meta = {
+		"gen_version": int(save_data.get("gen_version", 0)),
+		"params_hash": int(save_data.get("params_hash", 0)),
+	}
 
 	var id_remap: Array[int] = []
 	for i in palette.size():

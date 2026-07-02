@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scripts/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/camera_rig.gd" id="2_camrig"]
@@ -6,6 +6,10 @@
 [ext_resource type="Script" path="res://addons/voxel_engine/voxel_world.gd" id="4_vworld"]
 [ext_resource type="Script" path="res://scripts/block_editor.gd" id="5_editor"]
 [ext_resource type="Script" path="res://scripts/block_editor_ui.gd" id="6_editor_ui"]
+[ext_resource type="Script" path="res://addons/voxel_engine/map_gen_params.gd" id="7_genparams"]
+
+[sub_resource type="Resource" id="GenParams"]
+script = ExtResource("7_genparams")
 
 [sub_resource type="CapsuleShape3D" id="Shape_player"]
 radius = 0.35
@@ -39,6 +43,7 @@ environment = SubResource("Env_main")
 
 [node name="VoxelWorld" type="Node3D" parent="."]
 script = ExtResource("4_vworld")
+gen_params = SubResource("GenParams")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.866025, 0, 0.5, 0.383022, 0.642788, -0.663414, -0.321394, 0.766044, 0.55667, 0, 14, 0)
