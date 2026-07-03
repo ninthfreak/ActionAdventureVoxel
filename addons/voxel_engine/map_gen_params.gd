@@ -45,11 +45,11 @@ extends Resource
 @export var lamps_enabled: bool = true
 
 @export_group("Vegetation")
-## Fraction of open grass columns that get a large tree.
-@export_range(0.0, 0.1, 0.001) var tree_density: float = 0.012
+## Fraction of open grass columns that seed a full oak tree.
+@export_range(0.0, 0.1, 0.001) var tree_density: float = 0.007
 ## Birches only appear inside noise-defined groves.
-@export_range(0.0, 0.1, 0.001) var birch_density: float = 0.014
-@export_range(0.0, 0.05, 0.001) var town_tree_density: float = 0.005
+@export_range(0.0, 0.1, 0.001) var birch_density: float = 0.012
+@export_range(0.0, 0.05, 0.001) var town_tree_density: float = 0.004
 
 ## Stable hash of every exported value — stored in the save file so a
 ## params change triggers regeneration.

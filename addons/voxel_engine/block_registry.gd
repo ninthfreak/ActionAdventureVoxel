@@ -1,37 +1,43 @@
 class_name BlockRegistry
+## Runtime registry of every block in res://blocks. Blocks are GLB meshes
+## named "<material-variant>.<shape>" (PrismCraft convention). IDs are
+## assigned alphabetically at startup; save files remap through the palette,
+## so IDs staying stable across library changes is not required.
 
 const CHUNK_SIZE := 16
-
 const AIR := 0
+const BLOCKS_DIR := "res://blocks"
 
 static var _defs: Array[Dictionary] = []
 static var _name_to_id: Dictionary = {}
 static var _mesh_cache: Dictionary = {}
+static var _shape_cache: Dictionary = {}
+static var _cel_mat: ShaderMaterial
+static var _box_shape: BoxShape3D
 
 static func _ensure_init() -> void:
 	if not _defs.is_empty():
 		return
 	_register(AIR, "air", false)
-	_register(1, "grass", true)
-	_register(2, "dirt", true)
-	_register(3, "sand", true)
-	_register(4, "water", false)
-	_register(5, "asphalt", true)
-	_register(6, "gravel", true)
-	_register(7, "concrete_walkway", true)
-	_register(8, "bricks", true)
-	_register(9, "cement_blocks", true)
-	_register(10, "leaves", true)
-	_register(11, "shingles_slate", true)
-	_register(12, "tree_generic_large", true)
-	_register(13, "tree_birch_small", true)
-	_register(14, "metal_pole_large", true)
-	_register(15, "metal_pole_small", true)
+	var found := {}
+	var dir := DirAccess.open(BLOCKS_DIR)
+	if dir:
+		for f in dir.get_files():
+			if f.ends_with(".glb"):
+				found[f.trim_suffix(".glb")] = true
+			elif f.ends_with(".glb.import"):
+				found[f.trim_suffix(".glb.import")] = true
+	var names := found.keys()
+	names.sort()
+	var id := 1
+	for n: String in names:
+		_register(id, n, n != "water.cube")
+		id += 1
 
-static func _register(id: int, block_name: String, has_collision: bool) -> void:
+static func _register(id: int, block_name: String, has_col: bool) -> void:
 	while _defs.size() <= id:
 		_defs.append({})
-	_defs[id] = {"id": id, "name": block_name, "has_collision": has_collision}
+	_defs[id] = {"id": id, "name": block_name, "has_collision": has_col}
 	_name_to_id[block_name] = id
 
 static func get_id(block_name: String) -> int:
@@ -50,7 +56,7 @@ static func has_collision(id: int) -> bool:
 		return false
 	return _defs[id].get("has_collision", false)
 
-static func get_mesh(id: int) -> ArrayMesh:
+static func get_mesh(id: int) -> Mesh:
 	if id == AIR:
 		return null
 	if _mesh_cache.has(id):
@@ -58,9 +64,64 @@ static func get_mesh(id: int) -> ArrayMesh:
 	var block_name := get_name_from_id(id)
 	if block_name == "air":
 		return null
-	var mesh := ObjLoader.load_block(block_name)
+	var scene := load("%s/%s.glb" % [BLOCKS_DIR, block_name]) as PackedScene
+	var mesh: Mesh = null
+	if scene:
+		var inst := scene.instantiate()
+		var mi := _find_mesh_instance(inst)
+		if mi and mi.mesh:
+			mesh = mi.mesh.duplicate()
+			for si in mesh.get_surface_count():
+				mesh.surface_set_material(si, _get_cel_material())
+		inst.free()
 	_mesh_cache[id] = mesh
 	return mesh
+
+## Unit box for full cubes, convex hull for shaped blocks (ramps, stairs,
+## slabs, octagons, gables) so they are walkable, null for water.
+static func get_collision_shape(id: int) -> Shape3D:
+	if not has_collision(id):
+		return null
+	if _shape_cache.has(id):
+		return _shape_cache[id]
+	var block_name := get_name_from_id(id)
+	var shape: Shape3D
+	if block_name.ends_with(".cube") or block_name.ends_with(".opening"):
+		if not _box_shape:
+			_box_shape = BoxShape3D.new()
+			_box_shape.size = Vector3.ONE
+		shape = _box_shape
+	else:
+		var mesh := get_mesh(id)
+		if mesh:
+			shape = mesh.create_convex_shape(true, true)
+	_shape_cache[id] = shape
+	return shape
+
+static func is_full_cube(id: int) -> bool:
+	var n := get_name_from_id(id)
+	return n.ends_with(".cube") or n.ends_with(".opening")
+
+static func _find_mesh_instance(node: Node) -> MeshInstance3D:
+	if node is MeshInstance3D:
+		return node
+	for child in node.get_children():
+		var found := _find_mesh_instance(child)
+		if found:
+			return found
+	return null
+
+static func _get_cel_material() -> ShaderMaterial:
+	if _cel_mat:
+		return _cel_mat
+	var sh := load("res://shaders/cel.gdshader") as Shader
+	_cel_mat = ShaderMaterial.new()
+	_cel_mat.shader = sh
+	_cel_mat.set_shader_parameter("use_vertex_color", true)
+	_cel_mat.set_shader_parameter("shadow_strength", 0.4)
+	_cel_mat.set_shader_parameter("bands", 3)
+	_cel_mat.set_shader_parameter("cutaway_affected", true)
+	return _cel_mat
 
 static func get_placeable_ids() -> Array[int]:
 	_ensure_init()

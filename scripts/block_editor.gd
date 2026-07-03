@@ -5,6 +5,7 @@ extends Node
 
 var active := false
 var selected_idx := 0
+var cursor_rot := 0
 var _placeable_ids: Array[int] = []
 var _cursor_preview: MeshInstance3D
 var _cursor_mat: StandardMaterial3D
@@ -58,6 +59,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		_update_cursor_mesh()
 		block_selected.emit(_placeable_ids[selected_idx], BlockRegistry.get_name_from_id(_placeable_ids[selected_idx]))
 		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("editor_rotate"):
+		cursor_rot = (cursor_rot + 1) % 4
+		_cursor_preview.rotation = Vector3(0.0, float(cursor_rot) * PI * 0.5, 0.0)
+		get_viewport().set_input_as_handled()
 
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_LEFT:
@@ -85,7 +90,7 @@ func _place_block() -> void:
 		return
 	var pos := _get_place_position(result)
 	var id := _placeable_ids[selected_idx]
-	_world.set_block(pos.x, pos.y, pos.z, id)
+	_world.set_block(pos.x, pos.y, pos.z, id, cursor_rot)
 
 func _remove_block() -> void:
 	var result := _raycast_cursor()

@@ -10,6 +10,7 @@ func build() -> void:
 	if not data or data.is_empty():
 		return
 
+	# group by (id, rot) so each group renders as one MultiMesh
 	var groups: Dictionary = {}
 	for y in ChunkData.SIZE:
 		for z in ChunkData.SIZE:
@@ -17,44 +18,53 @@ func build() -> void:
 				var id := data.get_block(x, y, z)
 				if id == BlockRegistry.AIR:
 					continue
-				if not groups.has(id):
-					groups[id] = []
-				groups[id].append(Vector3(x, y, z))
+				var key := (id << 2) | data.get_rot(x, y, z)
+				if not groups.has(key):
+					groups[key] = []
+				groups[key].append(Vector3i(x, y, z))
 
-	for id in groups:
-		var positions: Array = groups[id]
+	for key: int in groups:
+		var id := key >> 2
+		var rot := key & 3
+		var positions: Array = groups[key]
 		var mesh := BlockRegistry.get_mesh(id)
 		if not mesh:
 			continue
 
+		var basis := Basis(Vector3.UP, float(rot) * PI * 0.5)
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		mm.mesh = mesh
 		mm.instance_count = positions.size()
 		for i in positions.size():
-			mm.set_instance_transform(i, Transform3D(Basis.IDENTITY, positions[i]))
+			mm.set_instance_transform(i, Transform3D(basis, Vector3(positions[i])))
 
 		var mmi := MultiMeshInstance3D.new()
 		mmi.multimesh = mm
 		add_child(mmi)
 
-	var collision_positions: Array[Vector3] = []
-	for id in groups:
-		if not BlockRegistry.has_collision(id):
+	var body: StaticBody3D = null
+	for key: int in groups:
+		var id := key >> 2
+		var rot := key & 3
+		var shape := BlockRegistry.get_collision_shape(id)
+		if not shape:
 			continue
-		for pos in groups[id]:
-			if _is_exposed(int(pos.x), int(pos.y), int(pos.z)):
-				collision_positions.append(pos)
-
-	if not collision_positions.is_empty():
-		var body := StaticBody3D.new()
-		for pos in collision_positions:
+		for pos: Vector3i in groups[key]:
+			if not _is_exposed(pos.x, pos.y, pos.z):
+				continue
+			if not body:
+				body = StaticBody3D.new()
 			var col := CollisionShape3D.new()
-			var box := BoxShape3D.new()
-			box.size = Vector3(1.0, 1.0, 1.0)
-			col.shape = box
-			col.position = pos + Vector3(0.0, 0.5, 0.0)
+			col.shape = shape
+			if shape is BoxShape3D:
+				col.position = Vector3(pos) + Vector3(0.0, 0.5, 0.0)
+			else:
+				# shaped blocks: hull is modeled about the same origin as the
+				# mesh, so it takes the same rotation
+				col.transform = Transform3D(Basis(Vector3.UP, float(rot) * PI * 0.5), Vector3(pos))
 			body.add_child(col)
+	if body:
 		add_child(body)
 
 ## A block needs a collision shape only if some face touches a non-solid
@@ -70,6 +80,7 @@ func _is_exposed(x: int, y: int, z: int) -> bool:
 		var nz := z + offset.z
 		if nx < 0 or nx >= ChunkData.SIZE or ny < 0 or ny >= ChunkData.SIZE or nz < 0 or nz >= ChunkData.SIZE:
 			return true
-		if not BlockRegistry.has_collision(data.get_block(nx, ny, nz)):
+		var nid := data.get_block(nx, ny, nz)
+		if not BlockRegistry.has_collision(nid) or not BlockRegistry.is_full_cube(nid):
 			return true
 	return false
