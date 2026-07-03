@@ -13,7 +13,7 @@ extends RefCounted
 ##   opening pierces through:  rot 0 = along Z,   1 = along X
 ## South is +Z (screen-down at the default camera).
 
-const GEN_VERSION := 4
+const GEN_VERSION := 5
 
 const RISE_E := 0
 const RISE_N := 1
@@ -327,11 +327,15 @@ func _place_building(world: Node, x0: int, z0: int, w: int, d: int, floors: int,
 func _stair_run(f: int, x0: int, z0: int, w: int, d: int) -> Array:
 	var cells := []
 	if f % 2 == 0:
+		# along the north interior wall, climbing east.
+		# Entry cell (x0+1) stays open floor so the run is approachable;
+		# the top stair lands flush with the deck at x0+5.
 		for k in 3:
-			cells.append({"x": x0 + 1 + k, "z": z0 + 1, "y": f * 3 + k, "rot": RISE_E})
+			cells.append({"x": x0 + 2 + k, "z": z0 + 1, "y": f * 3 + k, "rot": RISE_E})
 	else:
+		# along the south interior wall, climbing west; entry at x0+w-2
 		for k in 3:
-			cells.append({"x": x0 + w - 2 - k, "z": z0 + d - 2, "y": f * 3 + k, "rot": RISE_W})
+			cells.append({"x": x0 + w - 3 - k, "z": z0 + d - 2, "y": f * 3 + k, "rot": RISE_W})
 	return cells
 
 func _place_interior_floors(world: Node, x0: int, z0: int, w: int, d: int, floors: int) -> void:
