@@ -13,7 +13,7 @@ extends RefCounted
 ##   opening pierces through:  rot 0 = along Z,   1 = along X
 ## South is +Z (screen-down at the default camera).
 
-const GEN_VERSION := 3
+const GEN_VERSION := 4
 
 const RISE_E := 0
 const RISE_N := 1
@@ -274,6 +274,9 @@ func _emit_town(world: Node) -> void:
 		_emit_lamps(world)
 
 func _place_building(world: Node, x0: int, z0: int, w: int, d: int, floors: int, ws: Dictionary) -> void:
+	# upper storeys need room for a staircase run plus landing
+	if w < 7 or d < 6:
+		floors = 1
 	var wall := _id(ws["wall"])
 	var corner := _id(ws["corner"])
 	var window := _id(ws["window"])
@@ -308,12 +311,55 @@ func _place_building(world: Node, x0: int, z0: int, w: int, d: int, floors: int,
 					rot = window_rot
 				world.set_block_no_rebuild(gx, y, gz, block, rot)
 
+	_place_interior_floors(world, x0, z0, w, d, floors)
+
 	var ramp_name: String = ws["ramp"]
 	var flat: bool = ramp_name.is_empty() or _rng.randf() < float(ws["flat_chance"])
 	if flat:
 		_flat_roof(world, x0, z0, w, d, wall_top, ws)
 	else:
 		_gable_roof(world, x0, z0, w, d, wall_top, ws)
+
+## One staircase run per storey transition, alternating between the north
+## and south interior wall so runs never stack into each other's headroom.
+## Transition f climbs from walk level f*3 to (f+1)*3; each run is three
+## stair blocks with plank fill below, plus a stairwell hole in the deck.
+func _stair_run(f: int, x0: int, z0: int, w: int, d: int) -> Array:
+	var cells := []
+	if f % 2 == 0:
+		for k in 3:
+			cells.append({"x": x0 + 1 + k, "z": z0 + 1, "y": f * 3 + k, "rot": RISE_E})
+	else:
+		for k in 3:
+			cells.append({"x": x0 + w - 2 - k, "z": z0 + d - 2, "y": f * 3 + k, "rot": RISE_W})
+	return cells
+
+func _place_interior_floors(world: Node, x0: int, z0: int, w: int, d: int, floors: int) -> void:
+	if floors < 2:
+		return
+	var deck := _id("oak-plank.cube")
+	var stair := _id("wood.stairs-2")
+
+	for f in range(1, floors):
+		# deck under storey f, with a stairwell hole above the run below
+		var deck_y := f * 3 - 1
+		var holes := {}
+		for cell: Dictionary in _stair_run(f - 1, x0, z0, w, d):
+			holes[Vector2i(cell["x"], cell["z"])] = true
+		for gz in range(z0 + 1, z0 + d - 1):
+			for gx in range(x0 + 1, x0 + w - 1):
+				if holes.has(Vector2i(gx, gz)):
+					continue
+				world.set_block_no_rebuild(gx, deck_y, gz, deck)
+
+	for f in range(0, floors - 1):
+		for cell: Dictionary in _stair_run(f, x0, z0, w, d):
+			var cx: int = cell["x"]
+			var cz: int = cell["z"]
+			var cy: int = cell["y"]
+			for y in range(f * 3, cy):
+				world.set_block_no_rebuild(cx, y, cz, deck)  # riser fill
+			world.set_block_no_rebuild(cx, cy, cz, stair, cell["rot"])
 
 func _flat_roof(world: Node, x0: int, z0: int, w: int, d: int, wall_top: int, ws: Dictionary) -> void:
 	var deck := _id("concrete.slab-half")

@@ -39,8 +39,8 @@ extends Resource
 @export_range(10, 60) var road_spacing: int = 24
 ## Chance that each plot between roads gets a building.
 @export_range(0.0, 1.0, 0.05) var building_density: float = 0.75
-@export_range(1, 4) var min_floors: int = 1
-@export_range(1, 4) var max_floors: int = 3
+@export_range(1, 5) var min_floors: int = 1
+@export_range(1, 5) var max_floors: int = 4
 @export var plaza_enabled: bool = true
 @export var lamps_enabled: bool = true
 

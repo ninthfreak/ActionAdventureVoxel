@@ -13,6 +13,7 @@ static var _name_to_id: Dictionary = {}
 static var _mesh_cache: Dictionary = {}
 static var _shape_cache: Dictionary = {}
 static var _cel_mat: ShaderMaterial
+static var _water_mat: ShaderMaterial
 static var _box_shape: BoxShape3D
 
 static func _ensure_init() -> void:
@@ -66,13 +67,14 @@ static func get_mesh(id: int) -> Mesh:
 		return null
 	var scene := load("%s/%s.glb" % [BLOCKS_DIR, block_name]) as PackedScene
 	var mesh: Mesh = null
+	var mat := _get_water_material() if block_name == "water.cube" else _get_cel_material()
 	if scene:
 		var inst := scene.instantiate()
 		var mi := _find_mesh_instance(inst)
 		if mi and mi.mesh:
 			mesh = mi.mesh.duplicate()
 			for si in mesh.get_surface_count():
-				mesh.surface_set_material(si, _get_cel_material())
+				mesh.surface_set_material(si, mat)
 		inst.free()
 	_mesh_cache[id] = mesh
 	return mesh
@@ -122,6 +124,13 @@ static func _get_cel_material() -> ShaderMaterial:
 	_cel_mat.set_shader_parameter("bands", 3)
 	_cel_mat.set_shader_parameter("cutaway_affected", true)
 	return _cel_mat
+
+static func _get_water_material() -> ShaderMaterial:
+	if _water_mat:
+		return _water_mat
+	_water_mat = _get_cel_material().duplicate()
+	_water_mat.set_shader_parameter("is_water", true)
+	return _water_mat
 
 static func get_placeable_ids() -> Array[int]:
 	_ensure_init()
