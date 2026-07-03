@@ -93,12 +93,28 @@ static func get_collision_shape(id: int) -> Shape3D:
 			_box_shape = BoxShape3D.new()
 			_box_shape.size = Vector3.ONE
 		shape = _box_shape
+	elif block_name.contains(".stairs"):
+		# stair meshes have vertical riser lips a capsule can't climb;
+		# collide as a smooth ramp wedge instead (rises toward +X like the mesh)
+		shape = _wedge_shape()
 	else:
 		var mesh := get_mesh(id)
 		if mesh:
 			shape = mesh.create_convex_shape(true, true)
 	_shape_cache[id] = shape
 	return shape
+
+static var _wedge: ConvexPolygonShape3D
+
+static func _wedge_shape() -> ConvexPolygonShape3D:
+	if not _wedge:
+		_wedge = ConvexPolygonShape3D.new()
+		_wedge.points = PackedVector3Array([
+			Vector3(-0.5, 0.0, -0.5), Vector3(-0.5, 0.0, 0.5),
+			Vector3(0.5, 0.0, -0.5), Vector3(0.5, 0.0, 0.5),
+			Vector3(0.5, 1.0, -0.5), Vector3(0.5, 1.0, 0.5),
+		])
+	return _wedge
 
 static func is_full_cube(id: int) -> bool:
 	var n := get_name_from_id(id)
