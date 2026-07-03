@@ -295,6 +295,9 @@ func _update_cutaway(delta: float) -> void:
 	RenderingServer.global_shader_parameter_set("voxel_cutaway", _cutaway)
 	RenderingServer.global_shader_parameter_set("voxel_water_reveal", _water_reveal)
 	RenderingServer.global_shader_parameter_set("voxel_player_pos", global_position + Vector3(0.0, 1.0, 0.0))
+	# slice plane: keep the wall row at chest height, hide everything above.
+	# Snapped to the block grid so the cut lands exactly on block tops.
+	RenderingServer.global_shader_parameter_set("voxel_cut_height", floorf(global_position.y + 0.1) + 1.0)
 
 func _update_animation() -> void:
 	if not is_on_floor():

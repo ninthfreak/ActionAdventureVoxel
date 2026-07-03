@@ -22,6 +22,10 @@ uniform bool is_water = false;
 global uniform float voxel_cutaway;
 global uniform vec3 voxel_player_pos;
 global uniform float voxel_water_reveal;
+// Block-grid-aligned slice plane: indoors, everything above this is hidden.
+// Snapped to integer Y so no block is ever half-cut — the remaining wall
+// row shows clean block tops, like a dollhouse floor slice.
+global uniform float voxel_cut_height;
 
 // interleaved gradient noise — stable per-pixel screen-door pattern
 float ign(vec2 p) {
@@ -37,22 +41,14 @@ void fragment() {
 	}
 	if (cutaway_affected && voxel_cutaway > 0.001) {
 		vec3 wp = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
-		float fade = 0.0;
-		// everything above the player's head nearby: roofs, upper floors, walls
-		if (wp.y > voxel_player_pos.y + 0.6 && distance(wp.xz, voxel_player_pos.xz) < 12.0) {
-			fade = 1.0;
-		}
-		// wall between the camera and the player
-		vec3 to_cam = normalize(CAMERA_POSITION_WORLD - voxel_player_pos);
-		vec3 rel = wp - voxel_player_pos;
-		float t = dot(rel, to_cam);
-		if (t > 0.8 && length(rel - to_cam * t) < 1.4) {
-			fade = 1.0;
-		}
-		fade *= voxel_cutaway;
-		if (fade > 0.0) {
-			// screen-door dither: keeps ~15% of pixels, no depth sorting issues
-			if (ign(FRAGCOORD.xy) < fade * 0.85) {
+		if (wp.y > voxel_cut_height + 0.01) {
+			// full discard near the player (clean slice showing block tops),
+			// dithering out only in a thin ring so distant roofs stay whole
+			float dist = distance(wp.xz, voxel_player_pos.xz);
+			float factor = (1.0 - smoothstep(10.0, 14.0, dist)) * voxel_cutaway;
+			if (factor > 0.999) {
+				discard;
+			} else if (factor > 0.001 && ign(FRAGCOORD.xy) < factor) {
 				discard;
 			}
 		}

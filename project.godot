@@ -88,6 +88,10 @@ voxel_player_pos={
 "type": "vec3",
 "value": Vector3(0, 0, 0)
 }
+voxel_cut_height={
+"type": "float",
+"value": 1000.0
+}
 voxel_water_reveal={
 "type": "float",
 "value": 0.0
