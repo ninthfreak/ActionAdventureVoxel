@@ -13,17 +13,20 @@ static func save_world(world: Node, path: String, meta: Dictionary = {}) -> Erro
 		palette.append(BlockRegistry.get_name_from_id(i))
 
 	var chunks_dict := {}
+	var rots_dict := {}
 	for ck in world.get_chunk_keys():
 		var data: ChunkData = world.get_chunk_data(ck)
 		if not data or data.is_empty():
 			continue
 		var key_str := "%d,%d,%d" % [ck.x, ck.y, ck.z]
 		chunks_dict[key_str] = Marshalls.raw_to_base64(data.blocks)
+		rots_dict[key_str] = Marshalls.raw_to_base64(data.rots)
 
 	var save_data := {
-		"version": 1,
+		"version": 2,
 		"palette": palette,
 		"chunks": chunks_dict,
+		"rots": rots_dict,
 	}
 	save_data.merge(meta)
 
@@ -53,6 +56,7 @@ static func load_world(world: Node, path: String) -> Error:
 	var save_data: Dictionary = json.data
 	var palette: Array = save_data.get("palette", [])
 	var chunks_dict: Dictionary = save_data.get("chunks", {})
+	var rots_dict: Dictionary = save_data.get("rots", {})
 	last_meta = {
 		"gen_version": int(save_data.get("gen_version", 0)),
 		"params_hash": int(save_data.get("params_hash", 0)),
@@ -75,6 +79,10 @@ static func load_world(world: Node, path: String) -> Error:
 				data.blocks[i] = id_remap[file_id]
 			else:
 				data.blocks[i] = 0
+		if rots_dict.has(key_str):
+			var raw_rots := Marshalls.base64_to_raw(rots_dict[key_str])
+			if raw_rots.size() == data.rots.size():
+				data.rots = raw_rots
 		world.set_chunk_data(ck, data)
 
 	world.rebuild_all()
