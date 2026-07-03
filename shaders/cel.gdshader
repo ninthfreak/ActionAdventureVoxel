@@ -15,16 +15,30 @@ uniform bool cutaway_affected = false;
 uniform float normal_flatten : hint_range(0.0, 1.0) = 0.0;
 // Off = ignore cast shadows (use for characters — stops shadow-map shimmer).
 uniform bool receive_shadows = true;
+// Water material flag: dithers semi-transparent while the player is submerged.
+uniform bool is_water = false;
 
-// Driven from player.gd: 1.0 while the player is indoors.
+// Driven from player.gd: 1.0 while the player is indoors / underwater.
 global uniform float voxel_cutaway;
 global uniform vec3 voxel_player_pos;
+global uniform float voxel_water_reveal;
+
+// interleaved gradient noise — stable per-pixel screen-door pattern
+float ign(vec2 p) {
+	return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
+}
 
 void fragment() {
+	if (is_water && voxel_water_reveal > 0.001) {
+		// semi-transparent water while swimming: drop ~55% of pixels
+		if (ign(FRAGCOORD.xy) < voxel_water_reveal * 0.55) {
+			discard;
+		}
+	}
 	if (cutaway_affected && voxel_cutaway > 0.001) {
 		vec3 wp = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
 		float fade = 0.0;
-		// roof and upper walls near the player
+		// everything above the player's head nearby: roofs, upper floors, walls
 		if (wp.y > voxel_player_pos.y + 0.6 && distance(wp.xz, voxel_player_pos.xz) < 12.0) {
 			fade = 1.0;
 		}
@@ -38,8 +52,7 @@ void fragment() {
 		fade *= voxel_cutaway;
 		if (fade > 0.0) {
 			// screen-door dither: keeps ~15% of pixels, no depth sorting issues
-			float dither = fract(52.9829189 * fract(dot(FRAGCOORD.xy, vec2(0.06711056, 0.00583715))));
-			if (dither < fade * 0.85) {
+			if (ign(FRAGCOORD.xy) < fade * 0.85) {
 				discard;
 			}
 		}

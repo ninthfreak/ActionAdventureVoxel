@@ -12,9 +12,14 @@ var _anim_player: AnimationPlayer
 var _current_anim := ""
 var _is_jumping := false
 var _cutaway := 0.0
+var _water_reveal := 0.0
 var _voxel_world: Node
 
 func _ready() -> void:
+	# 45-degree ramp and stair hulls must count as floor, and snapping keeps
+	# the capsule glued to slopes when walking downhill
+	floor_max_angle = deg_to_rad(50.0)
+	floor_snap_length = 0.6
 	_voxel_world = get_node_or_null("../VoxelWorld")
 	_spawn_model()
 	if _anim_player:
@@ -235,8 +240,10 @@ func _physics_process(delta: float) -> void:
 
 ## When something solid is overhead (i.e. we're indoors), fade in the
 ## cutaway global that the cel shader uses to dither away roof and walls.
+## When submerged, fade in the water-reveal global so water goes see-through.
 func _update_cutaway(delta: float) -> void:
 	var target := 0.0
+	var water_target := 0.0
 	if _voxel_world:
 		var px := floori(global_position.x)
 		var pz := floori(global_position.z)
@@ -246,8 +253,14 @@ func _update_cutaway(delta: float) -> void:
 			if id != BlockRegistry.AIR and BlockRegistry.has_collision(id):
 				target = 1.0
 				break
+		var water_id := BlockRegistry.get_id("water.cube")
+		if _voxel_world.get_block(px, floori(global_position.y + 0.3), pz) == water_id \
+			or _voxel_world.get_block(px, floori(global_position.y + 1.2), pz) == water_id:
+			water_target = 1.0
 	_cutaway = move_toward(_cutaway, target, delta * 4.0)
+	_water_reveal = move_toward(_water_reveal, water_target, delta * 4.0)
 	RenderingServer.global_shader_parameter_set("voxel_cutaway", _cutaway)
+	RenderingServer.global_shader_parameter_set("voxel_water_reveal", _water_reveal)
 	RenderingServer.global_shader_parameter_set("voxel_player_pos", global_position + Vector3(0.0, 1.0, 0.0))
 
 func _update_animation() -> void:
