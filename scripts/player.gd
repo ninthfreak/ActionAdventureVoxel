@@ -6,6 +6,10 @@ extends CharacterBody3D
 @export var turn_speed: float = 12.0
 @export var gravity: float = 24.0
 @export var jump_force: float = 10.0
+## Max ledge the player auto-climbs without jumping. Covers the half-block
+## riser lip on stair blocks and low curbs; kept below 1.0 so full voxel
+## blocks still need a jump.
+@export var step_height: float = 0.55
 
 var _model: Node3D
 var _anim_player: AnimationPlayer
@@ -224,7 +228,18 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.y -= gravity * delta
 
+	var pre_xz := Vector2(global_position.x, global_position.z)
+	var intended := Vector2(velocity.x, velocity.z)
 	move_and_slide()
+
+	# Stairs present a ~0.5 vertical riser that floor_max_angle can't climb;
+	# if we walked into a low ledge and stalled, lift up and over it.
+	if is_on_floor() and intended.length() > 0.1:
+		var moved := Vector2(global_position.x, global_position.z).distance_to(pre_xz)
+		if moved < intended.length() * delta * 0.7:
+			# probe at least a capsule-radius past the lip so we land on top of
+			# the step rather than dropping back down in front of it
+			_try_step_up(intended.normalized(), maxf(0.45, intended.length() * delta + 0.1))
 
 	# fell off the map — respawn at town center
 	if global_position.y < -30.0:
@@ -237,6 +252,24 @@ func _physics_process(delta: float) -> void:
 
 	_update_animation()
 	_update_cutaway(delta)
+
+## Climb a low ledge blocking horizontal motion: raise the capsule by
+## step_height, probe forward, then drop onto whatever surface is there.
+## Bails out (no teleport) if the ledge is too tall or there's no floor ahead.
+func _try_step_up(dir_xz: Vector2, dist: float) -> void:
+	var horiz := Vector3(dir_xz.x, 0.0, dir_xz.y) * dist
+	var up := Vector3.UP * step_height
+	var from := global_transform
+	if test_move(from, up):
+		return  # no headroom to lift
+	var lifted := from.translated(up)
+	if test_move(lifted, horiz):
+		return  # wall taller than a step, not a stair
+	var ahead := lifted.translated(horiz)
+	var landing := KinematicCollision3D.new()
+	if test_move(ahead, Vector3.DOWN * (step_height + 0.1), landing):
+		global_position = ahead.origin + landing.get_travel()
+		velocity.y = 0.0
 
 ## When something solid is overhead (i.e. we're indoors), fade in the
 ## cutaway global that the cel shader uses to dither away roof and walls.
