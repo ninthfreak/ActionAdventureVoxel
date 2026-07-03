@@ -308,7 +308,8 @@ func _place_building(world: Node, x0: int, z0: int, w: int, d: int, floors: int,
 					rot = window_rot
 				world.set_block_no_rebuild(gx, y, gz, block, rot)
 
-	var flat := ws["ramp"] == "" or _rng.randf() < float(ws["flat_chance"])
+	var ramp_name: String = ws["ramp"]
+	var flat: bool = ramp_name.is_empty() or _rng.randf() < float(ws["flat_chance"])
 	if flat:
 		_flat_roof(world, x0, z0, w, d, wall_top, ws)
 	else:
