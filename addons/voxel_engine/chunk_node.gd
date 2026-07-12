@@ -22,26 +22,25 @@ func build() -> void:
 					continue
 				if not _is_exposed(x, y, z):
 					continue
-				var key := (id << 2) | data.get_rot(x, y, z)
+				var key := (id << 5) | data.get_rot(x, y, z)
 				if not groups.has(key):
 					groups[key] = []
 				groups[key].append(Vector3i(x, y, z))
 
 	for key: int in groups:
-		var id := key >> 2
-		var rot := key & 3
+		var id := key >> 5
+		var rot := key & 31
 		var positions: Array = groups[key]
 		var mesh := BlockRegistry.get_mesh(id)
 		if not mesh:
 			continue
 
-		var basis := Basis(Vector3.UP, float(rot) * PI * 0.5)
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		mm.mesh = mesh
 		mm.instance_count = positions.size()
 		for i in positions.size():
-			mm.set_instance_transform(i, Transform3D(basis, Vector3(positions[i])))
+			mm.set_instance_transform(i, Orientations.block_transform(rot, Vector3(positions[i])))
 
 		var mmi := MultiMeshInstance3D.new()
 		mmi.multimesh = mm
@@ -49,8 +48,8 @@ func build() -> void:
 
 	var body: StaticBody3D = null
 	for key: int in groups:
-		var id := key >> 2
-		var rot := key & 3
+		var id := key >> 5
+		var rot := key & 31
 		var shape := BlockRegistry.get_collision_shape(id)
 		if not shape:
 			continue
@@ -62,9 +61,9 @@ func build() -> void:
 			if shape is BoxShape3D:
 				col.position = Vector3(pos) + Vector3(0.0, 0.5, 0.0)
 			else:
-				# shaped blocks: hull is modeled about the same origin as the
-				# mesh, so it takes the same rotation
-				col.transform = Transform3D(Basis(Vector3.UP, float(rot) * PI * 0.5), Vector3(pos))
+				# shaped blocks: hull shares the mesh origin, so it takes the
+				# same cell-centered orientation transform
+				col.transform = Orientations.block_transform(rot, Vector3(pos))
 			body.add_child(col)
 	if body:
 		add_child(body)
