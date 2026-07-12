@@ -322,6 +322,48 @@ static func _get_water_material() -> ShaderMaterial:
 	_water_mat.set_shader_parameter("is_water", true)
 	return _water_mat
 
+static var _icon_cache: Dictionary = {}
+
+## Small preview texture for UI: the +Z face tile for textured cubes, the
+## whole texture for adopted spec exports, or an average-color swatch for
+## legacy vertex-colored shapes.
+static func get_icon(id: int) -> Texture2D:
+	if _icon_cache.has(id):
+		return _icon_cache[id]
+	var mesh := get_mesh(id)
+	if not mesh:
+		return null
+	var icon: Texture2D = null
+	var mat := mesh.surface_get_material(0) as ShaderMaterial
+	if mat and mat.get_shader_parameter("use_texture"):
+		var tex: Texture2D = mat.get_shader_parameter("albedo_tex")
+		if tex and tex.get_width() == 192 and tex.get_height() == 32:
+			var at := AtlasTexture.new()
+			at.atlas = tex
+			at.region = Rect2(128, 0, 32, 32)  # +Z face tile
+			icon = at
+		else:
+			icon = tex
+	if not icon:
+		# legacy shaped block: average its vertex colors into a swatch
+		var sum := Vector3.ZERO
+		var count := 0
+		for s in mesh.get_surface_count():
+			var arrays := mesh.surface_get_arrays(s)
+			var cols: PackedColorArray = arrays[Mesh.ARRAY_COLOR] if arrays[Mesh.ARRAY_COLOR] else PackedColorArray()
+			for c in cols:
+				sum += Vector3(c.r, c.g, c.b)
+				count += 1
+		var avg := Color(0.6, 0.6, 0.6)
+		if count > 0:
+			sum /= float(count)
+			avg = Color(sum.x, sum.y, sum.z)
+		var img := Image.create(16, 16, false, Image.FORMAT_RGB8)
+		img.fill(avg)
+		icon = ImageTexture.create_from_image(img)
+	_icon_cache[id] = icon
+	return icon
+
 static func get_placeable_ids() -> Array[int]:
 	_ensure_init()
 	var ids: Array[int] = []

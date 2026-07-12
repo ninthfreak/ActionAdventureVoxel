@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="Script" path="res://scripts/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/camera_rig.gd" id="2_camrig"]
@@ -11,6 +11,7 @@
 [ext_resource type="Script" path="res://scripts/god_mode.gd" id="9_god"]
 [ext_resource type="Script" path="res://scripts/mode_manager.gd" id="10_modemgr"]
 [ext_resource type="Script" path="res://scripts/menu_bar_ui.gd" id="11_menubar"]
+[ext_resource type="Script" path="res://scripts/block_selector_ui.gd" id="12_selector"]
 
 [sub_resource type="Resource" id="GenParams"]
 script = ExtResource("7_genparams")
@@ -98,6 +99,7 @@ sun_path = NodePath("../Sun")
 script = ExtResource("5_editor")
 voxel_world_path = NodePath("../VoxelWorld")
 camera_path = NodePath("../CameraRig/Camera3D")
+mode_manager_path = NodePath("../ModeManager")
 
 [node name="BlockEditorUI" type="CanvasLayer" parent="."]
 script = ExtResource("6_editor_ui")
@@ -119,4 +121,9 @@ block_editor_path = NodePath("../BlockEditor")
 [node name="MenuBar" type="CanvasLayer" parent="."]
 script = ExtResource("11_menubar")
 voxel_world_path = NodePath("../VoxelWorld")
+mode_manager_path = NodePath("../ModeManager")
+
+[node name="BlockSelectorUI" type="CanvasLayer" parent="."]
+script = ExtResource("12_selector")
+editor_path = NodePath("../BlockEditor")
 mode_manager_path = NodePath("../ModeManager")
