@@ -19,6 +19,12 @@ var _options: VBoxContainer
 var _help: Label
 var _tool_buttons: Array[Button] = []
 
+## Selected floor band (Floors.MIN_FLOOR..MAX_FLOOR), or MAX_FLOOR+1 = "All"
+## (no slicing). The slice hides every block above the floor's top plane.
+var _slice_floor := Floors.MAX_FLOOR + 1
+var _floor_slider: VSlider
+var _floor_label: Label
+
 func _ready() -> void:
 	_world = get_node(voxel_world_path)
 	_camera = get_node_or_null(free_camera_path) as Camera3D
@@ -47,6 +53,7 @@ func set_active(v: bool) -> void:
 			_camera.current = true
 	if v:
 		_select_tool(_tool_idx)
+		_apply_slice()
 	else:
 		for t in _tools:
 			t.on_deactivate()
@@ -58,7 +65,17 @@ func _unhandled_input(event: InputEvent) -> void:
 		var hit := _raycast()
 		_tools[_tool_idx].on_primary(hit)
 		get_viewport().set_input_as_handled()
+	elif event is InputEventKey and event.pressed:
+		if event.keycode == KEY_PAGEUP and _floor_slider:
+			_floor_slider.value += 1
+			get_viewport().set_input_as_handled()
+		elif event.keycode == KEY_PAGEDOWN and _floor_slider:
+			_floor_slider.value -= 1
+			get_viewport().set_input_as_handled()
 
+## Slicing hides blocks above the active floor but their collision shapes
+## remain, so the ray marches past any hit above the slice plane — tools only
+## ever act on what's visible.
 func _raycast() -> Dictionary:
 	if not _camera:
 		return {}
@@ -66,8 +83,28 @@ func _raycast() -> Dictionary:
 	var origin := _camera.project_ray_origin(mouse)
 	var dir := _camera.project_ray_normal(mouse)
 	var space := _camera.get_world_3d().direct_space_state
-	var query := PhysicsRayQueryParameters3D.create(origin, origin + dir * 500.0)
-	return space.intersect_ray(query)
+	var cut := 1e9 if _slice_floor > Floors.MAX_FLOOR else float(Floors.top_of(_slice_floor))
+	var from := origin
+	for _i in 32:
+		var query := PhysicsRayQueryParameters3D.create(from, origin + dir * 500.0)
+		var hit := space.intersect_ray(query)
+		if hit.is_empty():
+			return hit
+		if (hit["position"] as Vector3).y <= cut + 0.05:
+			return hit
+		from = (hit["position"] as Vector3) + dir * 0.05
+	return {}
+
+func _apply_slice() -> void:
+	if _slice_floor > Floors.MAX_FLOOR:
+		RenderingServer.global_shader_parameter_set("voxel_cutaway", 0.0)
+		RenderingServer.global_shader_parameter_set("voxel_cut_height", 100000.0)
+	else:
+		RenderingServer.global_shader_parameter_set("voxel_cutaway", 1.0)
+		RenderingServer.global_shader_parameter_set("voxel_cut_height", float(Floors.top_of(_slice_floor)))
+		RenderingServer.global_shader_parameter_set("voxel_cut_radius", 1e6)
+	if _floor_label:
+		_floor_label.text = "All" if _slice_floor > Floors.MAX_FLOOR else str(_slice_floor)
 
 func _select_tool(idx: int) -> void:
 	if idx < 0 or idx >= _tools.size():
@@ -145,3 +182,65 @@ func _build_ui() -> void:
 	_help.add_theme_font_size_override("font_size", 11)
 	_help.add_theme_color_override("font_color", Color(0.7, 0.72, 0.75))
 	vbox.add_child(_help)
+
+	_build_floor_slider()
+
+## Vertical floor slider docked to the right edge. Topmost position is "All"
+## (no slicing); below it, each step selects one 4-block floor band and the
+## whole map is sliced at that floor's ceiling plane. PgUp/PgDn also step it.
+func _build_floor_slider() -> void:
+	var side := PanelContainer.new()
+	side.anchor_left = 1.0
+	side.anchor_right = 1.0
+	side.anchor_top = 0.0
+	side.anchor_bottom = 1.0
+	side.offset_left = -72.0
+	side.offset_right = -8.0
+	side.offset_top = 44.0
+	side.offset_bottom = -8.0
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.11, 0.12, 0.14, 0.92)
+	style.set_corner_radius_all(6)
+	style.set_content_margin_all(10.0)
+	side.add_theme_stylebox_override("panel", style)
+	_layer.add_child(side)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 6)
+	side.add_child(vbox)
+
+	var title := Label.new()
+	title.text = "Floor"
+	title.add_theme_font_size_override("font_size", 12)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+
+	_floor_label = Label.new()
+	_floor_label.text = "All"
+	_floor_label.add_theme_font_size_override("font_size", 16)
+	_floor_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(_floor_label)
+
+	_floor_slider = VSlider.new()
+	_floor_slider.min_value = Floors.MIN_FLOOR
+	_floor_slider.max_value = Floors.MAX_FLOOR + 1  # top notch = All
+	_floor_slider.step = 1
+	_floor_slider.value = Floors.MAX_FLOOR + 1
+	_floor_slider.tick_count = (Floors.MAX_FLOOR + 1) - Floors.MIN_FLOOR + 1
+	_floor_slider.ticks_on_borders = true
+	_floor_slider.focus_mode = Control.FOCUS_NONE
+	_floor_slider.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_floor_slider.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_floor_slider.value_changed.connect(_on_floor_slider_changed)
+	vbox.add_child(_floor_slider)
+
+	var hint := Label.new()
+	hint.text = "PgUp\nPgDn"
+	hint.add_theme_font_size_override("font_size", 10)
+	hint.add_theme_color_override("font_color", Color(0.6, 0.62, 0.66))
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(hint)
+
+func _on_floor_slider_changed(v: float) -> void:
+	_slice_floor = int(v)
+	_apply_slice()

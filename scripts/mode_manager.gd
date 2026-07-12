@@ -86,6 +86,7 @@ func _reset_shader_globals() -> void:
 	RenderingServer.global_shader_parameter_set("voxel_cutaway", 0.0)
 	RenderingServer.global_shader_parameter_set("voxel_water_reveal", 0.0)
 	RenderingServer.global_shader_parameter_set("voxel_cut_height", 100000.0)
+	RenderingServer.global_shader_parameter_set("voxel_cut_radius", 10.0)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("mode_explore"):
