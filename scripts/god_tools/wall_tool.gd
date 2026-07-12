@@ -75,7 +75,7 @@ func on_primary(hit: Dictionary) -> void:
 
 func _build_wall(a: Vector2i, b: Vector2i) -> void:
 	for cell: Vector2i in _line(a, b):
-		var base := world.surface_y(cell.x, cell.y)
+		var base: int = world.surface_y(cell.x, cell.y)
 		var y0 := 0 if base == world.NO_SURFACE else base + 1
 		for h in _height:
 			_put(cell.x, y0 + h, cell.y, _block_id)

@@ -13,7 +13,7 @@ func get_help() -> String:
 	return "Set a seed and press Generate to rebuild the world."
 
 func build_options(container: VBoxContainer) -> void:
-	var params := world._get_params()
+	var params: MapGenParams = world._get_params()
 	_seed = params.world_seed
 
 	var slabel := Label.new()
@@ -49,7 +49,7 @@ func build_options(container: VBoxContainer) -> void:
 	container.add_child(note)
 
 func _generate() -> void:
-	var params := world._get_params()
+	var params: MapGenParams = world._get_params()
 	params.world_seed = _seed
 	world.clear_world()
 	MapGenerator.generate(world, params)
