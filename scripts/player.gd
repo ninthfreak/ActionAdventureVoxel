@@ -305,10 +305,12 @@ func _try_step_up(dir_xz: Vector2, dist: float) -> void:
 ## When something solid is overhead (i.e. we're indoors), fade in the
 ## cutaway global that the cel shader uses to dither away roof and walls.
 ## When submerged, fade in the water-reveal global so water goes see-through.
+## Third-person only — in first person the camera is already inside the room,
+## so nothing needs to turn translucent.
 func _update_cutaway(delta: float) -> void:
 	var target := 0.0
 	var water_target := 0.0
-	if _voxel_world:
+	if _voxel_world and not first_person:
 		var px := floori(global_position.x)
 		var pz := floori(global_position.z)
 		var py := floori(global_position.y) + 2
