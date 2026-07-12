@@ -305,10 +305,12 @@ func _try_step_up(dir_xz: Vector2, dist: float) -> void:
 ## When something solid is overhead (i.e. we're indoors), fade in the
 ## cutaway global that the cel shader uses to dither away roof and walls.
 ## When submerged, fade in the water-reveal global so water goes see-through.
+## Third-person only — in first person the camera is already inside the room,
+## so nothing needs to turn translucent.
 func _update_cutaway(delta: float) -> void:
 	var target := 0.0
 	var water_target := 0.0
-	if _voxel_world:
+	if _voxel_world and not first_person:
 		var px := floori(global_position.x)
 		var pz := floori(global_position.z)
 		var py := floori(global_position.y) + 2
@@ -323,6 +325,9 @@ func _update_cutaway(delta: float) -> void:
 			water_target = 1.0
 	_cutaway = move_toward(_cutaway, target, delta * 4.0)
 	_water_reveal = move_toward(_water_reveal, water_target, delta * 4.0)
+	# transparent pipeline costs real frame time — only pay it while an
+	# effect is actually visible
+	BlockRegistry.set_translucent_pipeline(_cutaway > 0.001 or _water_reveal > 0.001)
 	RenderingServer.global_shader_parameter_set("voxel_cutaway", _cutaway)
 	RenderingServer.global_shader_parameter_set("voxel_water_reveal", _water_reveal)
 	RenderingServer.global_shader_parameter_set("voxel_player_pos", global_position + Vector3(0.0, 1.0, 0.0))

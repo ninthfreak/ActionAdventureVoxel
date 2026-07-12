@@ -10,13 +10,17 @@ func build() -> void:
 	if not data or data.is_empty():
 		return
 
-	# group by (id, rot) so each group renders as one MultiMesh
+	# group by (id, rot) so each group renders as one MultiMesh.
+	# Fully enclosed blocks (buried terrain fill, building attic fill) are
+	# invisible and skipped entirely — a large instance-count win.
 	var groups: Dictionary = {}
 	for y in ChunkData.SIZE:
 		for z in ChunkData.SIZE:
 			for x in ChunkData.SIZE:
 				var id := data.get_block(x, y, z)
 				if id == BlockRegistry.AIR:
+					continue
+				if not _is_exposed(x, y, z):
 					continue
 				var key := (id << 2) | data.get_rot(x, y, z)
 				if not groups.has(key):
@@ -51,8 +55,6 @@ func build() -> void:
 		if not shape:
 			continue
 		for pos: Vector3i in groups[key]:
-			if not _is_exposed(pos.x, pos.y, pos.z):
-				continue
 			if not body:
 				body = StaticBody3D.new()
 			var col := CollisionShape3D.new()
