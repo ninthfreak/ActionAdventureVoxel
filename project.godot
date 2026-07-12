@@ -116,6 +116,10 @@ voxel_cut_radius={
 "type": "float",
 "value": 10.0
 }
+voxel_cut_soft={
+"type": "float",
+"value": 1.0
+}
 voxel_water_reveal={
 "type": "float",
 "value": 0.0
