@@ -21,6 +21,7 @@ var _current_material := ""
 func _ready() -> void:
 	_editor = get_node(editor_path)
 	_mode_manager = get_node_or_null(mode_manager_path)
+	_editor.selector_requested.connect(_toggle)
 	_collect_blocks()
 	_build_ui()
 	visible = false
@@ -34,17 +35,17 @@ func _collect_blocks() -> void:
 			_by_material[mat] = []
 		_by_material[mat].append({"id": id, "shape": shape})
 
+## Tap-Tab opening is driven by the editor's selector_requested signal (the
+## editor owns Tab so holding it can open the copy menu instead). While open,
+## this consumes Tab/Esc/any outside click — including right-click — to close.
 func _unhandled_input(event: InputEvent) -> void:
-	if not _editor.active:
+	if not _editor.active or not _open:
 		return
-	if event.is_action_pressed("block_selector"):
+	if event.is_action_pressed("block_selector") or event.is_action_pressed("ui_cancel"):
 		_toggle()
 		get_viewport().set_input_as_handled()
-	elif _open and event.is_action_pressed("ui_cancel"):
-		_toggle()
-		get_viewport().set_input_as_handled()
-	elif _open and event is InputEventMouseButton and event.pressed:
-		# clicked outside the panel — close instead of leaving it dangling
+	elif event is InputEventMouseButton and event.pressed:
+		# clicked outside the panel (RMB cancels, LMB outside closes too)
 		_toggle()
 		get_viewport().set_input_as_handled()
 

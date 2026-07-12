@@ -52,7 +52,7 @@ func _build_ui() -> void:
 	vbox.add_child(_block_label)
 
 	var help := Label.new()
-	help.text = "Tab: blocks  R: rotate (hold: facing)  LMB: apply  L: camera"
+	help.text = "Tab: blocks (hold: copy)  R: rotate (hold: orient)  LMB: apply  L: camera"
 	help.add_theme_font_size_override("font_size", 11)
 	help.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	help.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
