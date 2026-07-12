@@ -13,8 +13,6 @@ var _modes: Node
 var _title: Label
 var _open_dialog: FileDialog
 var _save_dialog: FileDialog
-## When true the current Save-As is fulfilling a plain Save with no path yet.
-var _save_then := false
 
 func _ready() -> void:
 	_world = get_node_or_null(voxel_world_path)
@@ -23,6 +21,7 @@ func _ready() -> void:
 	_build_dialogs()
 	if _world:
 		_world.connect("map_changed", _on_map_changed)
+		_world.connect("save_as_requested", _prompt_save_as)
 		_on_map_changed(_world.display_name())
 
 func _build_bar() -> void:
@@ -105,13 +104,9 @@ func _on_file_item(id: int) -> void:
 			_open_dialog.popup_centered()
 		FileItem.SAVE:
 			if _world and not _world.save_current():
-				_save_then = true
-				_release_mouse()
-				_save_dialog.popup_centered()
+				_prompt_save_as()
 		FileItem.SAVE_AS:
-			_save_then = false
-			_release_mouse()
-			_save_dialog.popup_centered()
+			_prompt_save_as()
 		FileItem.QUIT:
 			get_tree().quit()
 
@@ -119,16 +114,29 @@ func _on_mode_item(id: int) -> void:
 	if _modes:
 		_modes.set_mode(id)
 
+func _prompt_save_as() -> void:
+	_release_mouse()
+	_save_dialog.popup_centered()
+
 func _on_open_selected(path: String) -> void:
-	if _world:
-		_world.load_map(path)
+	if not _world:
+		return
+	var err: Error = _world.load_map(path)
+	if err != OK:
+		var alert := AcceptDialog.new()
+		alert.title = "Open Failed"
+		alert.dialog_text = "Could not open \"%s\"\n(%s). The current map is unchanged." \
+			% [path.get_file(), error_string(err)]
+		add_child(alert)
+		alert.popup_centered()
+		alert.confirmed.connect(alert.queue_free)
+		alert.canceled.connect(alert.queue_free)
 
 func _on_save_selected(path: String) -> void:
 	if path.get_extension().to_lower() != "vxel":
 		path += ".vxel"
 	if _world:
 		_world.save_map(path)
-	_save_then = false
 
 func _on_map_changed(display_name: String) -> void:
 	if _title:

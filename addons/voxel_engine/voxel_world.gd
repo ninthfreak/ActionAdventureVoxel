@@ -12,6 +12,10 @@ var current_path: String = ""
 ## can update its title. Argument is a human-readable name.
 signal map_changed(display_name: String)
 
+## Fired when a save was requested but there is no path yet (untitled map) —
+## the menu bar responds by opening its Save As dialog.
+signal save_as_requested
+
 var _chunks: Dictionary = {}
 var _chunk_nodes: Dictionary = {}
 
@@ -62,6 +66,18 @@ func new_map(half_extent: int = 24) -> void:
 	map_changed.emit(display_name())
 
 func load_map(path: String) -> Error:
+	# validate the file BEFORE destroying the current world, so a corrupt or
+	# missing map leaves the open one untouched
+	if not FileAccess.file_exists(path):
+		return ERR_FILE_NOT_FOUND
+	var f := FileAccess.open(path, FileAccess.READ)
+	if not f:
+		return FileAccess.get_open_error()
+	var json := JSON.new()
+	var parse_err := json.parse(f.get_as_text())
+	f.close()
+	if parse_err != OK or not (json.data is Dictionary) or not (json.data as Dictionary).has("chunks"):
+		return ERR_PARSE_ERROR
 	clear_world()
 	var err := VoxelSave.load_world(self, path)
 	if err == OK:
@@ -90,8 +106,7 @@ func _save_to(path: String) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("editor_save"):
 		if not save_current():
-			# no path yet — let the menu bar prompt Save As
-			map_changed.emit(display_name())
+			save_as_requested.emit()  # untitled — menu bar opens Save As
 		get_viewport().set_input_as_handled()
 
 # --- Tool helpers (God mode) --------------------------------------------------
@@ -145,7 +160,8 @@ func set_block_no_rebuild(wx: int, wy: int, wz: int, id: int, rot: int = 0) -> v
 	chunk.set_block(local.x, local.y, local.z, id, rot)
 
 func rebuild_all() -> void:
-	for ck in _chunks:
+	# snapshot: _rebuild_chunk erases empty chunks from _chunks as it goes
+	for ck in _chunks.keys():
 		_rebuild_chunk(ck)
 
 func get_chunk_keys() -> Array:
