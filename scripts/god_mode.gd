@@ -96,7 +96,9 @@ func _raycast() -> Dictionary:
 	return {}
 
 func _apply_slice() -> void:
-	# hard slice (not the in-game translucent cutaway): plan view for editing
+	# hard slice (not the in-game translucent cutaway): plan view for editing,
+	# discard-based so it runs in the fast opaque pipeline
+	BlockRegistry.set_translucent_pipeline(false)
 	RenderingServer.global_shader_parameter_set("voxel_cut_soft", 0.0)
 	if _slice_floor > Floors.MAX_FLOOR:
 		RenderingServer.global_shader_parameter_set("voxel_cutaway", 0.0)

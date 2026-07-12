@@ -323,6 +323,9 @@ func _update_cutaway(delta: float) -> void:
 			water_target = 1.0
 	_cutaway = move_toward(_cutaway, target, delta * 4.0)
 	_water_reveal = move_toward(_water_reveal, water_target, delta * 4.0)
+	# transparent pipeline costs real frame time — only pay it while an
+	# effect is actually visible
+	BlockRegistry.set_translucent_pipeline(_cutaway > 0.001 or _water_reveal > 0.001)
 	RenderingServer.global_shader_parameter_set("voxel_cutaway", _cutaway)
 	RenderingServer.global_shader_parameter_set("voxel_water_reveal", _water_reveal)
 	RenderingServer.global_shader_parameter_set("voxel_player_pos", global_position + Vector3(0.0, 1.0, 0.0))

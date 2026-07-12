@@ -129,17 +129,32 @@ static func _find_mesh_instance(node: Node) -> MeshInstance3D:
 			return found
 	return null
 
+static var _sh_opaque: Shader
+static var _sh_soft: Shader
+
 static func _get_cel_material() -> ShaderMaterial:
 	if _cel_mat:
 		return _cel_mat
-	var sh := load("res://shaders/cel_blocks.gdshader") as Shader
+	_sh_opaque = load("res://shaders/cel_blocks_opaque.gdshader") as Shader
+	_sh_soft = load("res://shaders/cel_blocks.gdshader") as Shader
 	_cel_mat = ShaderMaterial.new()
-	_cel_mat.shader = sh
+	_cel_mat.shader = _sh_opaque
 	_cel_mat.set_shader_parameter("use_vertex_color", true)
 	_cel_mat.set_shader_parameter("shadow_strength", 0.4)
 	_cel_mat.set_shader_parameter("bands", 3)
 	_cel_mat.set_shader_parameter("cutaway_affected", true)
 	return _cel_mat
+
+## Blocks run the opaque pipeline by default; switch the shared materials to
+## the transparent-pipeline shader only while a translucent cutaway or water
+## reveal is actually visible. Uniforms persist across the swap.
+static func set_translucent_pipeline(on: bool) -> void:
+	_get_cel_material()
+	var sh := _sh_soft if on else _sh_opaque
+	if _cel_mat.shader != sh:
+		_cel_mat.shader = sh
+	if _water_mat and _water_mat.shader != sh:
+		_water_mat.shader = sh
 
 static func _get_water_material() -> ShaderMaterial:
 	if _water_mat:
