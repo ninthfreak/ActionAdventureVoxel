@@ -35,15 +35,29 @@ var _outline: MeshInstance3D
 var _rotate_held := false
 var _rotate_hold_time := 0.0
 var _picker_open := false
+var _picker_prev_rot := 0
 var _picker_layer: CanvasLayer
 var _up_label: Label
 var _spin_label: Label
 const HOLD_THRESHOLD := 0.32
 const SPIN_NAMES := ["0°", "90°", "180°", "270°"]
 
+# hold-Tab copy menu (tap Tab = block selector, via selector_requested)
+var _tab_held := false
+var _tab_hold_time := 0.0
+var _copy_open := false
+var _copy_layer: CanvasLayer
+var _copy_title: Label
+var _copy_labels: Array[Label] = []
+var _copy_choice := 2
+var _copy_id := 0
+var _copy_rot := 0
+const COPY_OPTIONS := ["Copy Block", "Copy Orientation", "Copy Block + Orientation"]
+
 signal editor_toggled(is_active: bool)
 signal block_selected(block_id: int, block_name: String)
 signal tool_changed(tool: int)
+signal selector_requested
 
 func _ready() -> void:
 	_world = get_node(voxel_world_path)
@@ -68,6 +82,7 @@ func _ready() -> void:
 	get_tree().root.add_child.call_deferred(_outline)
 
 	_build_picker_ui()
+	_build_copy_ui()
 	_refresh_ghost_mesh()
 
 func set_active(v: bool) -> void:
@@ -80,6 +95,7 @@ func set_active(v: bool) -> void:
 		if _outline:
 			_outline.visible = false
 		_close_picker()
+		_close_copy()
 	editor_toggled.emit(active)
 
 func set_camera(cam: Camera3D) -> void:
@@ -124,6 +140,22 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 
+	# Tab: tap opens the block selector, holding opens the copy menu
+	if event.is_action_pressed("block_selector") and not event.is_echo():
+		_tab_held = true
+		_tab_hold_time = 0.0
+		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_released("block_selector"):
+		if _copy_open:
+			_apply_copy()
+			_close_copy()
+		elif _tab_held:
+			selector_requested.emit()
+		_tab_held = false
+		get_viewport().set_input_as_handled()
+		return
+
 	if _picker_open and event is InputEventKey and event.pressed:
 		var up := Orientations.up_index(cursor_rot)
 		var sp := Orientations.spin(cursor_rot)
@@ -141,7 +173,35 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 
+	if _copy_open and event is InputEventKey and event.pressed:
+		match event.keycode:
+			KEY_UP:
+				_copy_choice = posmod(_copy_choice - 1, COPY_OPTIONS.size())
+			KEY_DOWN:
+				_copy_choice = posmod(_copy_choice + 1, COPY_OPTIONS.size())
+			_:
+				return
+		_update_copy_labels()
+		get_viewport().set_input_as_handled()
+		return
+
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT:
+		# right-click cancels either held menu without applying
+		if _copy_open:
+			_close_copy()
+			_tab_held = false
+			get_viewport().set_input_as_handled()
+			return
+		if _picker_open:
+			_set_rot(_picker_prev_rot)
+			_close_picker()
+			_rotate_held = false
+			get_viewport().set_input_as_handled()
+			return
+
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if _picker_open or _copy_open:
+			return
 		# in first person (center aim) only act while the mouse is captured, so
 		# clicks meant for the released-cursor menus don't edit blocks
 		if aim_from_center and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
@@ -160,6 +220,11 @@ func _process(delta: float) -> void:
 		_rotate_hold_time += delta
 		if _rotate_hold_time >= HOLD_THRESHOLD:
 			_open_picker()
+
+	if _tab_held and not _copy_open:
+		_tab_hold_time += delta
+		if _tab_hold_time >= HOLD_THRESHOLD:
+			_try_open_copy()
 
 	var result := _raycast_cursor()
 	if tool == Tool.PLACE:
@@ -282,10 +347,104 @@ func _build_outline_mesh() -> ArrayMesh:
 	mesh.surface_set_material(0, mat)
 	return mesh
 
+# --- copy menu (hold Tab) --------------------------------------------------
+
+## Samples the aimed block when the hold threshold fires. Stays pending (and
+## keeps trying) while the crosshair is over air.
+func _try_open_copy() -> void:
+	var result := _raycast_cursor()
+	if result.is_empty():
+		return
+	var pos := _get_remove_position(result)
+	var id: int = _world.get_block(pos.x, pos.y, pos.z)
+	if id == BlockRegistry.AIR:
+		return
+	_copy_id = id
+	_copy_rot = _world.get_rot(pos.x, pos.y, pos.z)
+	_copy_choice = 2  # block + orientation is the common case
+	_copy_open = true
+	_copy_title.text = BlockRegistry.get_name_from_id(id).replace(".", "  ").capitalize()
+	_update_copy_labels()
+	_copy_layer.visible = true
+	if _mode_manager:
+		_mode_manager.set_frozen(true)  # arrows navigate the menu
+
+func _apply_copy() -> void:
+	match _copy_choice:
+		0:
+			select_block(_copy_id)
+		1:
+			_set_rot(_copy_rot)
+		2:
+			select_block(_copy_id)
+			_set_rot(_copy_rot)
+
+func _close_copy() -> void:
+	if not _copy_open:
+		return
+	_copy_open = false
+	_copy_layer.visible = false
+	if _mode_manager:
+		_mode_manager.set_frozen(false)
+
+func _update_copy_labels() -> void:
+	for i in _copy_labels.size():
+		var current := i == _copy_choice
+		_copy_labels[i].add_theme_color_override("font_color",
+			Color(1.0, 0.9, 0.3) if current else Color(0.65, 0.68, 0.72))
+		_copy_labels[i].text = ("»  %s  «" if current else "%s") % COPY_OPTIONS[i]
+
+func _build_copy_ui() -> void:
+	_copy_layer = CanvasLayer.new()
+	_copy_layer.visible = false
+	add_child(_copy_layer)
+
+	var panel := PanelContainer.new()
+	panel.anchor_left = 0.5
+	panel.anchor_right = 0.5
+	panel.anchor_top = 0.5
+	panel.anchor_bottom = 0.5
+	panel.offset_left = -150.0
+	panel.offset_right = 150.0
+	panel.offset_top = -90.0
+	panel.offset_bottom = 90.0
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.1, 0.11, 0.13, 0.9)
+	style.set_corner_radius_all(8)
+	style.set_content_margin_all(12.0)
+	panel.add_theme_stylebox_override("panel", style)
+	_copy_layer.add_child(panel)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 5)
+	panel.add_child(vbox)
+
+	_copy_title = Label.new()
+	_copy_title.add_theme_font_size_override("font_size", 14)
+	_copy_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(_copy_title)
+
+	vbox.add_child(HSeparator.new())
+
+	for i in COPY_OPTIONS.size():
+		var lbl := Label.new()
+		lbl.add_theme_font_size_override("font_size", 14)
+		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		vbox.add_child(lbl)
+		_copy_labels.append(lbl)
+
+	var hint := Label.new()
+	hint.text = "↑/↓ choose — release Tab to apply — RMB cancels"
+	hint.add_theme_font_size_override("font_size", 10)
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.add_theme_color_override("font_color", Color(0.6, 0.62, 0.66))
+	vbox.add_child(hint)
+
 # --- facing picker (hold R) ------------------------------------------------
 
 func _open_picker() -> void:
 	_picker_open = true
+	_picker_prev_rot = cursor_rot
 	_picker_layer.visible = true
 	_set_ghost_alpha(0.22)  # wireframe-ish: mostly see-through with edges
 	_outline.position = _ghost.position

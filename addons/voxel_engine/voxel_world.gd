@@ -138,6 +138,14 @@ func get_block(wx: int, wy: int, wz: int) -> int:
 	var local := _world_to_local(wx, wy, wz)
 	return chunk.get_block(local.x, local.y, local.z)
 
+func get_rot(wx: int, wy: int, wz: int) -> int:
+	var ck := _world_to_chunk_key(wx, wy, wz)
+	var chunk := _chunks.get(ck) as ChunkData
+	if not chunk:
+		return 0
+	var local := _world_to_local(wx, wy, wz)
+	return chunk.get_rot(local.x, local.y, local.z)
+
 func set_block(wx: int, wy: int, wz: int, id: int, rot: int = 0) -> void:
 	var ck := _world_to_chunk_key(wx, wy, wz)
 	var chunk := _chunks.get(ck) as ChunkData
