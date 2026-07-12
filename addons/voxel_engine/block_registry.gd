@@ -132,7 +132,7 @@ static func _find_mesh_instance(node: Node) -> MeshInstance3D:
 static func _get_cel_material() -> ShaderMaterial:
 	if _cel_mat:
 		return _cel_mat
-	var sh := load("res://shaders/cel.gdshader") as Shader
+	var sh := load("res://shaders/cel_blocks.gdshader") as Shader
 	_cel_mat = ShaderMaterial.new()
 	_cel_mat.shader = sh
 	_cel_mat.set_shader_parameter("use_vertex_color", true)

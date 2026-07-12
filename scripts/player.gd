@@ -330,6 +330,7 @@ func _update_cutaway(delta: float) -> void:
 	# Snapped to the block grid so the cut lands exactly on block tops.
 	RenderingServer.global_shader_parameter_set("voxel_cut_height", floorf(global_position.y + 0.1) + 1.0)
 	RenderingServer.global_shader_parameter_set("voxel_cut_radius", 10.0)
+	RenderingServer.global_shader_parameter_set("voxel_cut_soft", 1.0)
 
 func _update_animation() -> void:
 	if not is_on_floor():
