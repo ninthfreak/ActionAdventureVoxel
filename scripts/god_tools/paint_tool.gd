@@ -51,7 +51,7 @@ func on_primary(hit: Dictionary) -> void:
 	for off: Vector2i in _disk(_radius):
 		var x := cx + off.x
 		var z := cz + off.y
-		var top := world.surface_y(x, z)
+		var top: int = world.surface_y(x, z)
 		if top == world.NO_SURFACE:
 			continue
 		_put(x, top, z, _block_id)
