@@ -40,7 +40,7 @@ func _build_ui() -> void:
 	_panel.add_child(vbox)
 
 	_mode_label = Label.new()
-	_mode_label.text = "BLOCK EDITOR  [E]"
+	_mode_label.text = "BLOCK EDITOR"
 	_mode_label.add_theme_font_size_override("font_size", 15)
 	_mode_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_mode_label)

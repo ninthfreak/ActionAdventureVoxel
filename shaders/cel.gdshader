@@ -26,6 +26,10 @@ global uniform float voxel_water_reveal;
 // Snapped to integer Y so no block is ever half-cut — the remaining wall
 // row shows clean block tops, like a dollhouse floor slice.
 global uniform float voxel_cut_height;
+// Horizontal reach of the slice around voxel_player_pos. The player cutaway
+// uses a local ring; the God-mode floor slider sets this huge to slice the
+// entire map at one floor.
+global uniform float voxel_cut_radius;
 
 // interleaved gradient noise — stable per-pixel screen-door pattern
 float ign(vec2 p) {
@@ -45,7 +49,7 @@ void fragment() {
 			// full discard near the player (clean slice showing block tops),
 			// dithering out only in a thin ring so distant roofs stay whole
 			float dist = distance(wp.xz, voxel_player_pos.xz);
-			float factor = (1.0 - smoothstep(10.0, 14.0, dist)) * voxel_cutaway;
+			float factor = (1.0 - smoothstep(voxel_cut_radius, voxel_cut_radius + 4.0, dist)) * voxel_cutaway;
 			if (factor > 0.999) {
 				discard;
 			} else if (factor > 0.001 && ign(FRAGCOORD.xy) < factor) {

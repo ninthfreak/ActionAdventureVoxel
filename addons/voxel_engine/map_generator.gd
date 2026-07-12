@@ -13,7 +13,7 @@ extends RefCounted
 ##   opening pierces through:  rot 0 = along Z,   1 = along X
 ## South is +Z (screen-down at the default camera).
 
-const GEN_VERSION := 5
+const GEN_VERSION := 6
 
 const RISE_E := 0
 const RISE_N := 1
@@ -274,14 +274,14 @@ func _emit_town(world: Node) -> void:
 		_emit_lamps(world)
 
 func _place_building(world: Node, x0: int, z0: int, w: int, d: int, floors: int, ws: Dictionary) -> void:
-	# upper storeys need room for a staircase run plus landing
-	if w < 7 or d < 6:
+	# upper storeys need room for a staircase run (Floors.HEIGHT steps) + landing
+	if w < 8 or d < 6:
 		floors = 1
 	var wall := _id(ws["wall"])
 	var corner := _id(ws["corner"])
 	var window := _id(ws["window"])
 	var floor_block := _id("oak-plank.cube")
-	var wall_top := floors * 3
+	var wall_top := floors * Floors.HEIGHT
 	var door_x := x0 + w / 2
 	var south_z := z0 + d - 1
 
@@ -306,8 +306,8 @@ func _place_building(world: Node, x0: int, z0: int, w: int, d: int, floors: int,
 				var rot := 0
 				if is_corner:
 					block = corner
-				elif y % 3 == 1 and (gx + gz) % 2 == 0:
-					block = window
+				elif y % Floors.HEIGHT == 2 and (gx + gz) % 2 == 0:
+					block = window  # mid-wall band of each storey
 					rot = window_rot
 				world.set_block_no_rebuild(gx, y, gz, block, rot)
 
@@ -322,20 +322,20 @@ func _place_building(world: Node, x0: int, z0: int, w: int, d: int, floors: int,
 
 ## One staircase run per storey transition, alternating between the north
 ## and south interior wall so runs never stack into each other's headroom.
-## Transition f climbs from walk level f*3 to (f+1)*3; each run is three
-## stair blocks with plank fill below, plus a stairwell hole in the deck.
+## Transition f climbs one Floors.HEIGHT band; each run is HEIGHT stair
+## blocks with plank fill below, plus a stairwell hole in the deck.
 func _stair_run(f: int, x0: int, z0: int, w: int, d: int) -> Array:
 	var cells := []
 	if f % 2 == 0:
 		# along the north interior wall, climbing east.
 		# Entry cell (x0+1) stays open floor so the run is approachable;
-		# the top stair lands flush with the deck at x0+5.
-		for k in 3:
-			cells.append({"x": x0 + 2 + k, "z": z0 + 1, "y": f * 3 + k, "rot": RISE_E})
+		# the top stair lands flush with the deck.
+		for k in Floors.HEIGHT:
+			cells.append({"x": x0 + 2 + k, "z": z0 + 1, "y": f * Floors.HEIGHT + k, "rot": RISE_E})
 	else:
 		# along the south interior wall, climbing west; entry at x0+w-2
-		for k in 3:
-			cells.append({"x": x0 + w - 3 - k, "z": z0 + d - 2, "y": f * 3 + k, "rot": RISE_W})
+		for k in Floors.HEIGHT:
+			cells.append({"x": x0 + w - 3 - k, "z": z0 + d - 2, "y": f * Floors.HEIGHT + k, "rot": RISE_W})
 	return cells
 
 func _place_interior_floors(world: Node, x0: int, z0: int, w: int, d: int, floors: int) -> void:
@@ -346,7 +346,7 @@ func _place_interior_floors(world: Node, x0: int, z0: int, w: int, d: int, floor
 
 	for f in range(1, floors):
 		# deck under storey f, with a stairwell hole above the run below
-		var deck_y := f * 3 - 1
+		var deck_y := f * Floors.HEIGHT - 1
 		var holes := {}
 		for cell: Dictionary in _stair_run(f - 1, x0, z0, w, d):
 			holes[Vector2i(cell["x"], cell["z"])] = true
@@ -361,7 +361,7 @@ func _place_interior_floors(world: Node, x0: int, z0: int, w: int, d: int, floor
 			var cx: int = cell["x"]
 			var cz: int = cell["z"]
 			var cy: int = cell["y"]
-			for y in range(f * 3, cy):
+			for y in range(f * Floors.HEIGHT, cy):
 				world.set_block_no_rebuild(cx, y, cz, deck)  # riser fill
 			world.set_block_no_rebuild(cx, cy, cz, stair, cell["rot"])
 

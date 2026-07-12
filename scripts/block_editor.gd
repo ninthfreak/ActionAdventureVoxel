@@ -1,9 +1,14 @@
 extends Node
+## Block placement/removal used by both Explore (mouse aim) and Build (first
+## person, screen-center aim). Activated and retargeted by the ModeManager;
+## it no longer toggles itself.
 
 @export var voxel_world_path: NodePath
 @export var camera_path: NodePath
 
 var active := false
+## Aim from the screen center (first person) instead of the mouse cursor.
+var aim_from_center := false
 var selected_idx := 0
 var cursor_rot := 0
 var _placeable_ids: Array[int] = []
@@ -17,7 +22,7 @@ signal block_selected(block_id: int, block_name: String)
 
 func _ready() -> void:
 	_world = get_node(voxel_world_path)
-	_camera = get_node(camera_path)
+	_camera = get_node_or_null(camera_path)
 	_placeable_ids = BlockRegistry.get_placeable_ids()
 
 	_cursor_mat = StandardMaterial3D.new()
@@ -31,6 +36,17 @@ func _ready() -> void:
 	_update_cursor_mesh()
 	get_tree().root.add_child.call_deferred(_cursor_preview)
 
+func set_active(v: bool) -> void:
+	if active == v:
+		return
+	active = v
+	if not active and _cursor_preview:
+		_cursor_preview.visible = false
+	editor_toggled.emit(active)
+
+func set_camera(cam: Camera3D) -> void:
+	_camera = cam
+
 func _update_cursor_mesh() -> void:
 	var id := _placeable_ids[selected_idx]
 	var mesh := BlockRegistry.get_mesh(id)
@@ -39,13 +55,6 @@ func _update_cursor_mesh() -> void:
 		_cursor_preview.material_override = _cursor_mat
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("editor_toggle"):
-		active = not active
-		_cursor_preview.visible = false
-		editor_toggled.emit(active)
-		get_viewport().set_input_as_handled()
-		return
-
 	if not active:
 		return
 
@@ -65,6 +74,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 	if event is InputEventMouseButton and event.pressed:
+		# in first person (center aim) only act while the mouse is captured, so
+		# clicks meant for the released-cursor menu don't place/remove blocks
+		if aim_from_center and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+			return
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			_place_block()
 			get_viewport().set_input_as_handled()
@@ -74,7 +87,6 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _process(_delta: float) -> void:
 	if not active:
-		_cursor_preview.visible = false
 		return
 	var result := _raycast_cursor()
 	if result.is_empty():
@@ -103,9 +115,10 @@ func _remove_block() -> void:
 func _raycast_cursor() -> Dictionary:
 	if not _camera:
 		return {}
-	var mouse_pos := _camera.get_viewport().get_mouse_position()
-	var origin := _camera.project_ray_origin(mouse_pos)
-	var direction := _camera.project_ray_normal(mouse_pos)
+	var screen := _camera.get_viewport().get_visible_rect().size * 0.5 if aim_from_center \
+		else _camera.get_viewport().get_mouse_position()
+	var origin := _camera.project_ray_origin(screen)
+	var direction := _camera.project_ray_normal(screen)
 	var space := _camera.get_world_3d().direct_space_state
 	var query := PhysicsRayQueryParameters3D.create(origin, origin + direction * 200.0)
 	return space.intersect_ray(query)

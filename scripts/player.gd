@@ -10,6 +10,14 @@ extends CharacterBody3D
 ## riser lip on stair blocks and low curbs; kept below 1.0 so full voxel
 ## blocks still need a jump.
 @export var step_height: float = 0.55
+@export var mouse_sensitivity: float = 0.0025
+@export var fps_camera_path: NodePath
+
+## Set by the ModeManager. When false the player is inert (God mode).
+var control_enabled := true
+## Third-person (camera-rig-relative movement, visible body) vs first-person
+## (mouse-look, body hidden, movement relative to own facing).
+var first_person := false
 
 var _model: Node3D
 var _anim_player: AnimationPlayer
@@ -18,6 +26,8 @@ var _is_jumping := false
 var _cutaway := 0.0
 var _water_reveal := 0.0
 var _voxel_world: Node
+var _fps_cam: Camera3D
+var _fps_pitch := 0.0
 
 func _ready() -> void:
 	# 45-degree ramp and stair hulls must count as floor, and snapping keeps
@@ -25,6 +35,8 @@ func _ready() -> void:
 	floor_max_angle = deg_to_rad(50.0)
 	floor_snap_length = 0.6
 	_voxel_world = get_node_or_null("../VoxelWorld")
+	if not fps_camera_path.is_empty():
+		_fps_cam = get_node_or_null(fps_camera_path) as Camera3D
 	_spawn_model()
 	if _anim_player:
 		_load_mixamo_anims()
@@ -196,12 +208,28 @@ func _play_anim(anim_name: String) -> void:
 		_anim_player.play(anim_name)
 		_current_anim = anim_name
 
+func _unhandled_input(event: InputEvent) -> void:
+	if not control_enabled or not first_person:
+		return
+	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		rotation.y -= event.relative.x * mouse_sensitivity
+		_fps_pitch = clampf(_fps_pitch - event.relative.y * mouse_sensitivity, -1.4, 1.4)
+		if _fps_cam:
+			_fps_cam.rotation.x = _fps_pitch
+
+func set_body_visible(v: bool) -> void:
+	if _model:
+		_model.visible = v
+
 func _read_input_direction() -> Vector3:
 	var raw := Vector3.ZERO
 	raw.x = Input.get_axis("move_left", "move_right")
 	raw.z = Input.get_axis("move_up", "move_down")
 	if raw.length() < 0.01:
 		return Vector3.ZERO
+	if first_person:
+		# movement relative to where the player (mouse-look) is facing
+		return (Basis(Vector3.UP, rotation.y) * raw).normalized()
 	var cam_rig := get_node_or_null("../CameraRig")
 	if cam_rig:
 		# rotate screen-space input by the camera's yaw so "up" is always
@@ -210,6 +238,8 @@ func _read_input_direction() -> Vector3:
 	return raw.normalized()
 
 func _physics_process(delta: float) -> void:
+	if not control_enabled:
+		return
 	var input_dir := _read_input_direction()
 	var running := Input.is_action_pressed("run")
 	var speed := run_speed if running else walk_speed
@@ -246,7 +276,8 @@ func _physics_process(delta: float) -> void:
 		global_position = Vector3(0.5, 3.0, 0.5)
 		velocity = Vector3.ZERO
 
-	if input_dir.length() > 0.1:
+	# in first person the mouse controls facing; only auto-turn in third person
+	if not first_person and input_dir.length() > 0.1:
 		var desired_yaw := atan2(input_dir.x, input_dir.z)
 		rotation.y = lerp_angle(rotation.y, desired_yaw, clampf(turn_speed * delta, 0.0, 1.0))
 
@@ -298,6 +329,7 @@ func _update_cutaway(delta: float) -> void:
 	# slice plane: keep the wall row at chest height, hide everything above.
 	# Snapped to the block grid so the cut lands exactly on block tops.
 	RenderingServer.global_shader_parameter_set("voxel_cut_height", floorf(global_position.y + 0.1) + 1.0)
+	RenderingServer.global_shader_parameter_set("voxel_cut_radius", 10.0)
 
 func _update_animation() -> void:
 	if not is_on_floor():

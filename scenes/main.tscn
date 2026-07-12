@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://scripts/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/camera_rig.gd" id="2_camrig"]
@@ -7,6 +7,10 @@
 [ext_resource type="Script" path="res://scripts/block_editor.gd" id="5_editor"]
 [ext_resource type="Script" path="res://scripts/block_editor_ui.gd" id="6_editor_ui"]
 [ext_resource type="Script" path="res://addons/voxel_engine/map_gen_params.gd" id="7_genparams"]
+[ext_resource type="Script" path="res://scripts/free_camera.gd" id="8_freecam"]
+[ext_resource type="Script" path="res://scripts/god_mode.gd" id="9_god"]
+[ext_resource type="Script" path="res://scripts/mode_manager.gd" id="10_modemgr"]
+[ext_resource type="Script" path="res://scripts/menu_bar_ui.gd" id="11_menubar"]
 
 [sub_resource type="Resource" id="GenParams"]
 script = ExtResource("7_genparams")
@@ -56,10 +60,16 @@ directional_shadow_blend_splits = true
 [node name="Player" type="CharacterBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1, 0.5)
 script = ExtResource("1_player")
+fps_camera_path = NodePath("FPSCamera")
 
 [node name="Collision" type="CollisionShape3D" parent="Player"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
 shape = SubResource("Shape_player")
+
+[node name="FPSCamera" type="Camera3D" parent="Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+current = false
+fov = 75.0
 
 [node name="CameraRig" type="Node3D" parent="."]
 script = ExtResource("2_camrig")
@@ -72,7 +82,13 @@ target_path = NodePath("../Player")
 [node name="Camera3D" type="Camera3D" parent="CameraRig"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 18)
 projection = 1
+current = true
 size = 14.0
+
+[node name="GodCamera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 32, 36)
+current = false
+script = ExtResource("8_freecam")
 
 [node name="CameraTuner" type="CanvasLayer" parent="."]
 script = ExtResource("3_tuner")
@@ -87,3 +103,21 @@ camera_path = NodePath("../CameraRig/Camera3D")
 [node name="BlockEditorUI" type="CanvasLayer" parent="."]
 script = ExtResource("6_editor_ui")
 editor_path = NodePath("../BlockEditor")
+
+[node name="GodMode" type="Node" parent="."]
+script = ExtResource("9_god")
+voxel_world_path = NodePath("../VoxelWorld")
+free_camera_path = NodePath("../GodCamera")
+
+[node name="ModeManager" type="Node" parent="."]
+script = ExtResource("10_modemgr")
+player_path = NodePath("../Player")
+rig_camera_path = NodePath("../CameraRig/Camera3D")
+fps_camera_path = NodePath("../Player/FPSCamera")
+god_path = NodePath("../GodMode")
+block_editor_path = NodePath("../BlockEditor")
+
+[node name="MenuBar" type="CanvasLayer" parent="."]
+script = ExtResource("11_menubar")
+voxel_world_path = NodePath("../VoxelWorld")
+mode_manager_path = NodePath("../ModeManager")
