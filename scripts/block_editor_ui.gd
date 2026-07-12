@@ -6,6 +6,22 @@ var _panel: PanelContainer
 var _block_label: Label
 var _mode_label: Label
 var _editor: Node
+var _crosshair: Control
+
+## Simple + reticle with a dark backing line so it reads on any surface.
+class Crosshair:
+	extends Control
+
+	func _draw() -> void:
+		var c := size * 0.5
+		var arms := [
+			[Vector2(-13, 0), Vector2(-4, 0)], [Vector2(4, 0), Vector2(13, 0)],
+			[Vector2(0, -13), Vector2(0, -4)], [Vector2(0, 4), Vector2(0, 13)],
+		]
+		for a: Array in arms:
+			draw_line(c + a[0], c + a[1], Color(0, 0, 0, 0.8), 4.0)
+		for a: Array in arms:
+			draw_line(c + a[0], c + a[1], Color(1, 1, 1, 0.95), 2.0)
 
 func _ready() -> void:
 	_editor = get_node(editor_path)
@@ -60,16 +76,30 @@ func _build_ui() -> void:
 
 	add_child(_panel)
 
+	_crosshair = Crosshair.new()
+	_crosshair.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_crosshair.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_crosshair.visible = false
+	add_child(_crosshair)
+
+func _update_crosshair() -> void:
+	# reticle for the delete tool in first-person aim, where there's no
+	# ghost block to show what's targeted
+	_crosshair.visible = _editor.active and _editor.tool == 1 and _editor.aim_from_center
+
 func _on_editor_toggled(is_active: bool) -> void:
 	_panel.visible = is_active
 	if is_active:
 		_update_block_label()
+	_update_crosshair()
 
 func _on_block_selected(_id: int, _name: String) -> void:
 	_update_block_label()
+	_update_crosshair()
 
 func _on_tool_changed(_tool: int) -> void:
 	_update_block_label()
+	_update_crosshair()
 
 func _update_block_label() -> void:
 	if _editor.tool == 1:  # Tool.DELETE
