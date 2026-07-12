@@ -78,7 +78,7 @@ func _build_wall(a: Vector2i, b: Vector2i) -> void:
 		var base := world.surface_y(cell.x, cell.y)
 		var y0 := 0 if base == world.NO_SURFACE else base + 1
 		for h in _height:
-			_set(cell.x, y0 + h, cell.y, _block_id)
+			_put(cell.x, y0 + h, cell.y, _block_id)
 	_flush()
 
 ## Integer grid line between two points (Bresenham on X/Z).
