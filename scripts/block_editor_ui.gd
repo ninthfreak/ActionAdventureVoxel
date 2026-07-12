@@ -11,6 +11,7 @@ func _ready() -> void:
 	_editor = get_node(editor_path)
 	_editor.editor_toggled.connect(_on_editor_toggled)
 	_editor.block_selected.connect(_on_block_selected)
+	_editor.tool_changed.connect(_on_tool_changed)
 	_build_ui()
 	_panel.visible = false
 
@@ -51,7 +52,7 @@ func _build_ui() -> void:
 	vbox.add_child(_block_label)
 
 	var help := Label.new()
-	help.text = "Q/R: cycle  T: rotate  LMB: place  RMB: remove"
+	help.text = "Tab: blocks  R: rotate (hold: facing)  LMB: apply  L: camera"
 	help.add_theme_font_size_override("font_size", 11)
 	help.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	help.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
@@ -67,5 +68,13 @@ func _on_editor_toggled(is_active: bool) -> void:
 func _on_block_selected(_id: int, _name: String) -> void:
 	_update_block_label()
 
+func _on_tool_changed(_tool: int) -> void:
+	_update_block_label()
+
 func _update_block_label() -> void:
-	_block_label.text = _editor.get_selected_block_name().replace("_", " ").capitalize()
+	if _editor.tool == 1:  # Tool.DELETE
+		_block_label.text = "DELETE MODE"
+		_block_label.add_theme_color_override("font_color", Color(1.0, 0.55, 0.5))
+	else:
+		_block_label.text = "Place: " + _editor.get_selected_block_name().replace(".", "  ").capitalize()
+		_block_label.add_theme_color_override("font_color", Color(1, 1, 1))

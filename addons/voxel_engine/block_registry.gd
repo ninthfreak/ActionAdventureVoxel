@@ -72,10 +72,13 @@ static func get_mesh(id: int) -> Mesh:
 		var inst := scene.instantiate()
 		var mi := _find_mesh_instance(inst)
 		if mi and mi.mesh:
-			# PrismCraft GLBs bake their 32x32 textures as one quad PER TEXEL
-			# (a plain cube is ~8600 triangles). Rebuild .cube blocks as
-			# 12-triangle cubes with the colors extracted into a real texture.
-			if block_name.ends_with(".cube"):
+			# Spec-compliant exports (docs/prismcraft-export-spec.md) are
+			# low-poly with an embedded texture: use them as-is.
+			mesh = _adopt_textured_mesh(mi.mesh, block_name)
+			# Legacy PrismCraft GLBs bake their 32x32 textures as one quad
+			# PER TEXEL (a plain cube is ~8600 triangles). Rebuild .cube
+			# blocks as 12-triangle cubes with an extracted texture.
+			if not mesh and block_name.ends_with(".cube"):
 				mesh = _build_cube_proxy(mi.mesh, block_name)
 			if not mesh:
 				mesh = mi.mesh.duplicate()
@@ -84,6 +87,31 @@ static func get_mesh(id: int) -> Mesh:
 					mesh.surface_set_material(si, mat)
 		inst.free()
 	_mesh_cache[id] = mesh
+	return mesh
+
+## If the GLB carries a real albedo texture (new-spec export), keep its
+## geometry and wrap the texture in our cel material.
+static func _adopt_textured_mesh(src: Mesh, block_name: String) -> ArrayMesh:
+	var any_tex := false
+	for s in src.get_surface_count():
+		var m := src.surface_get_material(s) as BaseMaterial3D
+		if m and m.albedo_texture:
+			any_tex = true
+			break
+	if not any_tex:
+		return null
+	var mesh := src.duplicate() as ArrayMesh
+	for s in mesh.get_surface_count():
+		var src_mat := src.surface_get_material(s) as BaseMaterial3D
+		var mat := _get_cel_material().duplicate() as ShaderMaterial
+		mat.set_shader_parameter("use_vertex_color", false)
+		if src_mat and src_mat.albedo_texture:
+			mat.set_shader_parameter("use_texture", true)
+			mat.set_shader_parameter("albedo_tex", src_mat.albedo_texture)
+		if block_name == "water.cube":
+			mat.set_shader_parameter("is_water", true)
+		_swap_mats.append(mat)
+		mesh.surface_set_material(s, mat)
 	return mesh
 
 # --- textured cube proxies ------------------------------------------------
@@ -293,6 +321,48 @@ static func _get_water_material() -> ShaderMaterial:
 	_water_mat = _get_cel_material().duplicate()
 	_water_mat.set_shader_parameter("is_water", true)
 	return _water_mat
+
+static var _icon_cache: Dictionary = {}
+
+## Small preview texture for UI: the +Z face tile for textured cubes, the
+## whole texture for adopted spec exports, or an average-color swatch for
+## legacy vertex-colored shapes.
+static func get_icon(id: int) -> Texture2D:
+	if _icon_cache.has(id):
+		return _icon_cache[id]
+	var mesh := get_mesh(id)
+	if not mesh:
+		return null
+	var icon: Texture2D = null
+	var mat := mesh.surface_get_material(0) as ShaderMaterial
+	if mat and mat.get_shader_parameter("use_texture"):
+		var tex: Texture2D = mat.get_shader_parameter("albedo_tex")
+		if tex and tex.get_width() == 192 and tex.get_height() == 32:
+			var at := AtlasTexture.new()
+			at.atlas = tex
+			at.region = Rect2(128, 0, 32, 32)  # +Z face tile
+			icon = at
+		else:
+			icon = tex
+	if not icon:
+		# legacy shaped block: average its vertex colors into a swatch
+		var sum := Vector3.ZERO
+		var count := 0
+		for s in mesh.get_surface_count():
+			var arrays := mesh.surface_get_arrays(s)
+			var cols: PackedColorArray = arrays[Mesh.ARRAY_COLOR] if arrays[Mesh.ARRAY_COLOR] else PackedColorArray()
+			for c in cols:
+				sum += Vector3(c.r, c.g, c.b)
+				count += 1
+		var avg := Color(0.6, 0.6, 0.6)
+		if count > 0:
+			sum /= float(count)
+			avg = Color(sum.x, sum.y, sum.z)
+		var img := Image.create(16, 16, false, Image.FORMAT_RGB8)
+		img.fill(avg)
+		icon = ImageTexture.create_from_image(img)
+	_icon_cache[id] = icon
+	return icon
 
 static func get_placeable_ids() -> Array[int]:
 	_ensure_init()

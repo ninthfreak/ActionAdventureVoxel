@@ -59,7 +59,9 @@ func new_map(half_extent: int = 24) -> void:
 	var dirt := BlockRegistry.get_id("dirt.cube")
 	for z in range(-half_extent, half_extent):
 		for x in range(-half_extent, half_extent):
-			set_block_no_rebuild(x, -2, z, dirt)
+			# grass surface plus 4 layers of sub-floor (floor -1 fully solid)
+			for y in range(-5, -1):
+				set_block_no_rebuild(x, y, z, dirt)
 			set_block_no_rebuild(x, -1, z, grass)
 	rebuild_all()
 	current_path = ""

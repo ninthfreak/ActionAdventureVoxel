@@ -13,7 +13,7 @@ extends RefCounted
 ##   opening pierces through:  rot 0 = along Z,   1 = along X
 ## South is +Z (screen-down at the default camera).
 
-const GEN_VERSION := 6
+const GEN_VERSION := 7
 
 const RISE_E := 0
 const RISE_N := 1
@@ -198,18 +198,15 @@ func _emit_terrain(world: Node) -> void:
 		for x in range(-half, half):
 			var h := _get_h(x, z)
 			if h < 0:
-				# water column: dirt bed, water filled up to one below ground level
-				world.set_block_no_rebuild(x, h - 2, z, dirt)
+				# water column: 4-layer dirt bed, water up to one below ground
+				for y in range(h - 5, h - 1):
+					world.set_block_no_rebuild(x, y, z, dirt)
 				for y in range(h - 1, -1):
 					world.set_block_no_rebuild(x, y, z, water)
 				continue
-			# solid column: fill deep enough that hillsides show no holes
-			var min_nb := h
-			min_nb = mini(min_nb, _get_h(x - 1, z))
-			min_nb = mini(min_nb, _get_h(x + 1, z))
-			min_nb = mini(min_nb, _get_h(x, z - 1))
-			min_nb = mini(min_nb, _get_h(x, z + 1))
-			for y in range(min_nb - 2, h - 1):
+			# solid column: surface block plus 4 layers of sub-floor, so the
+			# band below ground level (floor -1) is fully solid and diggable
+			for y in range(h - 5, h - 1):
 				world.set_block_no_rebuild(x, y, z, dirt)
 			world.set_block_no_rebuild(x, h - 1, z, _tops[_idx(x, z)])
 

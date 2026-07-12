@@ -50,7 +50,7 @@ func _build_ui() -> void:
 	_panel.add_child(vbox)
 
 	var title := Label.new()
-	title.text = "Camera Tuner  [Tab]"
+	title.text = "Camera Tuner  [L]"
 	title.add_theme_font_size_override("font_size", 15)
 	vbox.add_child(title)
 

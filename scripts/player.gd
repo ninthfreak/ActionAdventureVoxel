@@ -310,15 +310,19 @@ func _try_step_up(dir_xz: Vector2, dist: float) -> void:
 func _update_cutaway(delta: float) -> void:
 	var target := 0.0
 	var water_target := 0.0
-	if _voxel_world and not first_person:
+	if _voxel_world:
 		var px := floori(global_position.x)
 		var pz := floori(global_position.z)
-		var py := floori(global_position.y) + 2
-		for y in range(py, py + 14):
-			var id: int = _voxel_world.get_block(px, y, pz)
-			if id != BlockRegistry.AIR and BlockRegistry.has_collision(id):
-				target = 1.0
-				break
+		# wall/ceiling cutaway is third-person only — in first person the
+		# camera is already inside the room
+		if not first_person:
+			var py := floori(global_position.y) + 2
+			for y in range(py, py + 14):
+				var id: int = _voxel_world.get_block(px, y, pz)
+				if id != BlockRegistry.AIR and BlockRegistry.has_collision(id):
+					target = 1.0
+					break
+		# water turns see-through when submerged in every mode
 		var water_id := BlockRegistry.get_id("water.cube")
 		if _voxel_world.get_block(px, floori(global_position.y + 0.3), pz) == water_id \
 			or _voxel_world.get_block(px, floori(global_position.y + 1.2), pz) == water_id:
