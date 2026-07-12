@@ -5,8 +5,9 @@ extends Node
 ##            previews the exact cell and rotation before you click.
 ##   DELETE — LMB removes the targeted block, which is shown with a bright
 ##            outline. Right-click never deletes.
-## R taps rotate the pending block 90°; holding R opens a facing picker
-## (arrow keys choose the direction, release R to confirm).
+## R taps spin the pending block 90°; holding R opens an orientation picker
+## covering all 24 orientations: Up/Down arrows choose which way the block's
+## top faces, Left/Right spin it, release R to confirm.
 
 enum Tool { PLACE, DELETE }
 
@@ -30,15 +31,15 @@ var _ghost: MeshInstance3D
 var _ghost_meshes: Dictionary = {}
 var _outline: MeshInstance3D
 
-# hold-R facing picker
+# hold-R orientation picker (all 24 orientations)
 var _rotate_held := false
 var _rotate_hold_time := 0.0
 var _picker_open := false
 var _picker_layer: CanvasLayer
-var _dir_labels: Array[Label] = []
+var _up_label: Label
+var _spin_label: Label
 const HOLD_THRESHOLD := 0.32
-## rot index per arrow: up=north(1), right=east(0), down=south(3), left=west(2)
-const DIR_NAMES := ["East", "North", "West", "South"]
+const SPIN_NAMES := ["0°", "90°", "180°", "270°"]
 
 signal editor_toggled(is_active: bool)
 signal block_selected(block_id: int, block_name: String)
@@ -117,21 +118,24 @@ func _unhandled_input(event: InputEvent) -> void:
 		if _picker_open:
 			_close_picker()
 		elif _rotate_held:
-			_set_rot((cursor_rot + 1) % 4)  # short tap
+			# short tap: next spin around the current up axis
+			_set_rot(Orientations.make(Orientations.up_index(cursor_rot), Orientations.spin(cursor_rot) + 1))
 		_rotate_held = false
 		get_viewport().set_input_as_handled()
 		return
 
 	if _picker_open and event is InputEventKey and event.pressed:
+		var up := Orientations.up_index(cursor_rot)
+		var sp := Orientations.spin(cursor_rot)
 		match event.keycode:
 			KEY_UP:
-				_set_rot(1)
-			KEY_RIGHT:
-				_set_rot(0)
+				_set_rot(Orientations.make(up - 1, sp))
 			KEY_DOWN:
-				_set_rot(3)
+				_set_rot(Orientations.make(up + 1, sp))
+			KEY_RIGHT:
+				_set_rot(Orientations.make(up, sp + 1))
 			KEY_LEFT:
-				_set_rot(2)
+				_set_rot(Orientations.make(up, sp - 1))
 			_:
 				return
 		get_viewport().set_input_as_handled()
@@ -164,8 +168,7 @@ func _process(delta: float) -> void:
 			_ghost.visible = false
 			return
 		var pos := _get_place_position(result)
-		_ghost.position = Vector3(pos)
-		_ghost.rotation = Vector3(0.0, float(cursor_rot) * PI * 0.5, 0.0)
+		_ghost.transform = Orientations.block_transform(cursor_rot, Vector3(pos))
 		_ghost.visible = true
 	else:
 		_ghost.visible = false
@@ -303,15 +306,14 @@ func _close_picker() -> void:
 		_mode_manager.set_frozen(false)
 
 func _set_rot(r: int) -> void:
-	cursor_rot = r
+	cursor_rot = clampi(r, 0, Orientations.COUNT - 1)
 	_update_picker_labels()
 
 func _update_picker_labels() -> void:
-	for i in _dir_labels.size():
-		var current := i == cursor_rot
-		_dir_labels[i].add_theme_color_override("font_color",
-			Color(1.0, 0.9, 0.3) if current else Color(0.65, 0.68, 0.72))
-		_dir_labels[i].text = ("» %s «" if current else "%s") % DIR_NAMES[i]
+	if not _up_label:
+		return
+	_up_label.text = "Top faces:  %s" % Orientations.UP_NAMES[Orientations.up_index(cursor_rot)]
+	_spin_label.text = "Spin:  %s" % SPIN_NAMES[Orientations.spin(cursor_rot)]
 
 func _build_picker_ui() -> void:
 	_picker_layer = CanvasLayer.new()
@@ -323,10 +325,10 @@ func _build_picker_ui() -> void:
 	panel.anchor_right = 0.5
 	panel.anchor_top = 0.5
 	panel.anchor_bottom = 0.5
-	panel.offset_left = -110.0
-	panel.offset_right = 110.0
-	panel.offset_top = -92.0
-	panel.offset_bottom = 92.0
+	panel.offset_left = -140.0
+	panel.offset_right = 140.0
+	panel.offset_top = -80.0
+	panel.offset_bottom = 80.0
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.1, 0.11, 0.13, 0.9)
 	style.set_corner_radius_all(8)
@@ -335,38 +337,40 @@ func _build_picker_ui() -> void:
 	_picker_layer.add_child(panel)
 
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 4)
+	vbox.add_theme_constant_override("separation", 6)
 	panel.add_child(vbox)
 
 	var title := Label.new()
-	title.text = "FACING  (hold R, arrows to aim)"
+	title.text = "ORIENTATION  (hold R)"
 	title.add_theme_font_size_override("font_size", 12)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title)
 
-	# diamond layout: N on top, W and E on a middle row, S on the bottom
-	_dir_labels.resize(4)
-	var north := Label.new()
-	_dir_labels[1] = north
-	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 60)
-	var west := Label.new()
-	var east := Label.new()
-	_dir_labels[2] = west
-	_dir_labels[0] = east
-	var south := Label.new()
-	_dir_labels[3] = south
-	for lbl: Label in [north, west, east, south]:
-		lbl.add_theme_font_size_override("font_size", 17)
-		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	north.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	south.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	vbox.add_child(north)
-	row.add_child(west)
-	row.add_child(east)
-	vbox.add_child(row)
-	vbox.add_child(south)
+	_up_label = Label.new()
+	_up_label.add_theme_font_size_override("font_size", 16)
+	_up_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.3))
+	_up_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(_up_label)
+
+	var up_hint := Label.new()
+	up_hint.text = "↑ / ↓  change top face"
+	up_hint.add_theme_font_size_override("font_size", 10)
+	up_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	up_hint.add_theme_color_override("font_color", Color(0.6, 0.62, 0.66))
+	vbox.add_child(up_hint)
+
+	_spin_label = Label.new()
+	_spin_label.add_theme_font_size_override("font_size", 16)
+	_spin_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.3))
+	_spin_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(_spin_label)
+
+	var spin_hint := Label.new()
+	spin_hint.text = "← / →  spin"
+	spin_hint.add_theme_font_size_override("font_size", 10)
+	spin_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	spin_hint.add_theme_color_override("font_color", Color(0.6, 0.62, 0.66))
+	vbox.add_child(spin_hint)
 
 	var hint := Label.new()
 	hint.text = "release R to confirm"

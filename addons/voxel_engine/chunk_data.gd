@@ -4,7 +4,7 @@ const SIZE := 16
 const VOLUME := SIZE * SIZE * SIZE
 
 var blocks := PackedByteArray()
-## Per-block yaw: 0-3 quarter turns counter-clockwise (Basis(UP, rot * PI/2)).
+## Per-block orientation index, 0-23 (see Orientations). 0-3 are plain yaw.
 var rots := PackedByteArray()
 
 func _init() -> void:
@@ -23,7 +23,7 @@ func set_block(x: int, y: int, z: int, id: int, rot: int = 0) -> void:
 		return
 	var i := x + z * SIZE + y * SIZE * SIZE
 	blocks[i] = id
-	rots[i] = rot & 3
+	rots[i] = clampi(rot, 0, Orientations.COUNT - 1)
 
 func get_rot(x: int, y: int, z: int) -> int:
 	if x < 0 or x >= SIZE or y < 0 or y >= SIZE or z < 0 or z >= SIZE:
