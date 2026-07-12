@@ -36,9 +36,10 @@ var _rotate_held := false
 var _rotate_hold_time := 0.0
 var _picker_open := false
 var _picker_prev_rot := 0
+var _picker_had_capture := false
 var _picker_layer: CanvasLayer
+var _picker_buttons: Array[Button] = []
 var _up_label: Label
-var _spin_label: Label
 const HOLD_THRESHOLD := 0.32
 const SPIN_NAMES := ["0°", "90°", "180°", "270°"]
 
@@ -440,7 +441,10 @@ func _build_copy_ui() -> void:
 	hint.add_theme_color_override("font_color", Color(0.6, 0.62, 0.66))
 	vbox.add_child(hint)
 
-# --- facing picker (hold R) ------------------------------------------------
+# --- orientation picker (hold R) --------------------------------------------
+## A 6x4 grid (top-face rows x spin columns). Hovering a cell applies that
+## orientation to the in-world ghost immediately — the ghost IS the preview.
+## Click or release R to confirm; RMB restores the previous orientation.
 
 func _open_picker() -> void:
 	_picker_open = true
@@ -450,8 +454,11 @@ func _open_picker() -> void:
 	_outline.position = _ghost.position
 	_outline.visible = tool == Tool.PLACE and _ghost.visible
 	_update_picker_labels()
+	_picker_had_capture = Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
+	if _picker_had_capture:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	if _mode_manager:
-		_mode_manager.set_frozen(true)  # arrows must not move the character
+		_mode_manager.set_frozen(true)  # arrows/mouse must not move the character
 
 func _close_picker() -> void:
 	if not _picker_open:
@@ -461,6 +468,8 @@ func _close_picker() -> void:
 	_set_ghost_alpha(0.55)
 	if tool == Tool.PLACE:
 		_outline.visible = false
+	if _picker_had_capture:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	if _mode_manager:
 		_mode_manager.set_frozen(false)
 
@@ -471,8 +480,12 @@ func _set_rot(r: int) -> void:
 func _update_picker_labels() -> void:
 	if not _up_label:
 		return
-	_up_label.text = "Top faces:  %s" % Orientations.UP_NAMES[Orientations.up_index(cursor_rot)]
-	_spin_label.text = "Spin:  %s" % SPIN_NAMES[Orientations.spin(cursor_rot)]
+	_up_label.text = "%s  ·  %s" % [
+		Orientations.UP_NAMES[Orientations.up_index(cursor_rot)],
+		SPIN_NAMES[Orientations.spin(cursor_rot)],
+	]
+	for r in _picker_buttons.size():
+		_picker_buttons[r].set_pressed_no_signal(r == cursor_rot)
 
 func _build_picker_ui() -> void:
 	_picker_layer = CanvasLayer.new()
@@ -484,10 +497,10 @@ func _build_picker_ui() -> void:
 	panel.anchor_right = 0.5
 	panel.anchor_top = 0.5
 	panel.anchor_bottom = 0.5
-	panel.offset_left = -140.0
-	panel.offset_right = 140.0
-	panel.offset_top = -80.0
-	panel.offset_bottom = 80.0
+	panel.offset_left = -190.0
+	panel.offset_right = 190.0
+	panel.offset_top = -150.0
+	panel.offset_bottom = 150.0
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.1, 0.11, 0.13, 0.9)
 	style.set_corner_radius_all(8)
@@ -500,39 +513,58 @@ func _build_picker_ui() -> void:
 	panel.add_child(vbox)
 
 	var title := Label.new()
-	title.text = "ORIENTATION  (hold R)"
+	title.text = "ORIENTATION"
 	title.add_theme_font_size_override("font_size", 12)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title)
 
 	_up_label = Label.new()
-	_up_label.add_theme_font_size_override("font_size", 16)
+	_up_label.add_theme_font_size_override("font_size", 15)
 	_up_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.3))
 	_up_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_up_label)
 
-	var up_hint := Label.new()
-	up_hint.text = "↑ / ↓  change top face"
-	up_hint.add_theme_font_size_override("font_size", 10)
-	up_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	up_hint.add_theme_color_override("font_color", Color(0.6, 0.62, 0.66))
-	vbox.add_child(up_hint)
+	var grid := GridContainer.new()
+	grid.columns = 5
+	grid.add_theme_constant_override("h_separation", 4)
+	grid.add_theme_constant_override("v_separation", 4)
+	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	vbox.add_child(grid)
 
-	_spin_label = Label.new()
-	_spin_label.add_theme_font_size_override("font_size", 16)
-	_spin_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.3))
-	_spin_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(_spin_label)
+	# header row: corner blank + spin columns
+	grid.add_child(Control.new())
+	for s in 4:
+		var head := Label.new()
+		head.text = SPIN_NAMES[s]
+		head.add_theme_font_size_override("font_size", 11)
+		head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		head.custom_minimum_size.x = 58.0
+		grid.add_child(head)
 
-	var spin_hint := Label.new()
-	spin_hint.text = "← / →  spin"
-	spin_hint.add_theme_font_size_override("font_size", 10)
-	spin_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	spin_hint.add_theme_color_override("font_color", Color(0.6, 0.62, 0.66))
-	vbox.add_child(spin_hint)
+	_picker_buttons.resize(Orientations.COUNT)
+	for u in Orientations.UPS.size():
+		var row_head := Label.new()
+		row_head.text = Orientations.UP_NAMES[u]
+		row_head.add_theme_font_size_override("font_size", 11)
+		grid.add_child(row_head)
+		for s in 4:
+			var rot := Orientations.make(u, s)
+			var btn := Button.new()
+			btn.toggle_mode = true
+			btn.focus_mode = Control.FOCUS_NONE
+			btn.custom_minimum_size = Vector2(58.0, 26.0)
+			btn.text = "·"
+			# hovering previews the orientation live on the ghost
+			btn.mouse_entered.connect(func(): _set_rot(rot))
+			btn.pressed.connect(func():
+				_set_rot(rot)
+				_close_picker()
+				_rotate_held = false)
+			grid.add_child(btn)
+			_picker_buttons[rot] = btn
 
 	var hint := Label.new()
-	hint.text = "release R to confirm"
+	hint.text = "hover to preview — click or release R to confirm\narrows also work — RMB cancels"
 	hint.add_theme_font_size_override("font_size", 10)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.add_theme_color_override("font_color", Color(0.6, 0.62, 0.66))
