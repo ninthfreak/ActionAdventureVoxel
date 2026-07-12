@@ -49,8 +49,8 @@ func on_primary(hit: Dictionary) -> void:
 		if top == world.NO_SURFACE:
 			continue
 		if _lower:
-			_set(x, top, z, BlockRegistry.AIR)
+			_put(x, top, z, BlockRegistry.AIR)
 		else:
-			_set(x, top, z, dirt)      # old surface becomes subsoil
-			_set(x, top + 1, z, grass) # new grassy top
+			_put(x, top, z, dirt)      # old surface becomes subsoil
+			_put(x, top + 1, z, grass) # new grassy top
 	_flush()

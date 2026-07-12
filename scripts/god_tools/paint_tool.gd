@@ -54,5 +54,5 @@ func on_primary(hit: Dictionary) -> void:
 		var top := world.surface_y(x, z)
 		if top == world.NO_SURFACE:
 			continue
-		_set(x, top, z, _block_id)
+		_put(x, top, z, _block_id)
 	_flush()

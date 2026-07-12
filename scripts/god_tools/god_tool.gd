@@ -32,7 +32,7 @@ func on_deactivate() -> void:
 
 # --- batched editing helpers --------------------------------------------------
 
-func _set(wx: int, wy: int, wz: int, id: int, rot: int = 0) -> void:
+func _put(wx: int, wy: int, wz: int, id: int, rot: int = 0) -> void:
 	world.set_block_no_rebuild(wx, wy, wz, id, rot)
 	_dirty[world.chunk_key_of(wx, wy, wz)] = true
 
