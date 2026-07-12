@@ -72,10 +72,13 @@ static func get_mesh(id: int) -> Mesh:
 		var inst := scene.instantiate()
 		var mi := _find_mesh_instance(inst)
 		if mi and mi.mesh:
-			# PrismCraft GLBs bake their 32x32 textures as one quad PER TEXEL
-			# (a plain cube is ~8600 triangles). Rebuild .cube blocks as
-			# 12-triangle cubes with the colors extracted into a real texture.
-			if block_name.ends_with(".cube"):
+			# Spec-compliant exports (docs/prismcraft-export-spec.md) are
+			# low-poly with an embedded texture: use them as-is.
+			mesh = _adopt_textured_mesh(mi.mesh, block_name)
+			# Legacy PrismCraft GLBs bake their 32x32 textures as one quad
+			# PER TEXEL (a plain cube is ~8600 triangles). Rebuild .cube
+			# blocks as 12-triangle cubes with an extracted texture.
+			if not mesh and block_name.ends_with(".cube"):
 				mesh = _build_cube_proxy(mi.mesh, block_name)
 			if not mesh:
 				mesh = mi.mesh.duplicate()
@@ -84,6 +87,31 @@ static func get_mesh(id: int) -> Mesh:
 					mesh.surface_set_material(si, mat)
 		inst.free()
 	_mesh_cache[id] = mesh
+	return mesh
+
+## If the GLB carries a real albedo texture (new-spec export), keep its
+## geometry and wrap the texture in our cel material.
+static func _adopt_textured_mesh(src: Mesh, block_name: String) -> ArrayMesh:
+	var any_tex := false
+	for s in src.get_surface_count():
+		var m := src.surface_get_material(s) as BaseMaterial3D
+		if m and m.albedo_texture:
+			any_tex = true
+			break
+	if not any_tex:
+		return null
+	var mesh := src.duplicate() as ArrayMesh
+	for s in mesh.get_surface_count():
+		var src_mat := src.surface_get_material(s) as BaseMaterial3D
+		var mat := _get_cel_material().duplicate() as ShaderMaterial
+		mat.set_shader_parameter("use_vertex_color", false)
+		if src_mat and src_mat.albedo_texture:
+			mat.set_shader_parameter("use_texture", true)
+			mat.set_shader_parameter("albedo_tex", src_mat.albedo_texture)
+		if block_name == "water.cube":
+			mat.set_shader_parameter("is_water", true)
+		_swap_mats.append(mat)
+		mesh.surface_set_material(s, mat)
 	return mesh
 
 # --- textured cube proxies ------------------------------------------------
