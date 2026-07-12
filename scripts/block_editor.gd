@@ -276,15 +276,41 @@ func _raycast_cursor() -> Dictionary:
 	var direction := _camera.project_ray_normal(screen)
 	var space := _camera.get_world_3d().direct_space_state
 	var query := PhysicsRayQueryParameters3D.create(origin, origin + direction * 200.0)
-	return space.intersect_ray(query)
+	var result := space.intersect_ray(query)
+	if not result.is_empty():
+		result["dir"] = direction
+	return result
 
-func _get_place_position(result: Dictionary) -> Vector3i:
-	var place: Vector3 = result["position"] + result["normal"] * 0.5
-	return Vector3i(floori(place.x), floori(place.y), floori(place.z))
-
+## The cell the ray actually hit. Stepping slightly ALONG THE RAY (not the
+## normal) is what makes this reliable on ramps/stairs, whose surface
+## normals are diagonal and used to flip the selection into neighbor cells.
 func _get_remove_position(result: Dictionary) -> Vector3i:
-	var remove: Vector3 = result["position"] - result["normal"] * 0.5
-	return Vector3i(floori(remove.x), floori(remove.y), floori(remove.z))
+	var hit: Vector3 = result["position"]
+	var n: Vector3 = result["normal"]
+	var dir: Vector3 = result.get("dir", -n)
+	var inside := hit + dir * 0.02 - n * 0.03
+	var cell := Vector3i(floori(inside.x), floori(inside.y), floori(inside.z))
+	if _world.get_block(cell.x, cell.y, cell.z) != BlockRegistry.AIR:
+		return cell
+	# grazing hit fell just outside — fall back to the half-normal step
+	var fb := hit - n * 0.5
+	return Vector3i(floori(fb.x), floori(fb.y), floori(fb.z))
+
+## Place into the cell face-adjacent to the hit cell along the dominant
+## normal axis — guaranteed to be a neighbor, immune to float jitter.
+func _get_place_position(result: Dictionary) -> Vector3i:
+	var n: Vector3 = result["normal"]
+	var axis := Vector3i.ZERO
+	var ax := absf(n.x)
+	var ay := absf(n.y)
+	var az := absf(n.z)
+	if ax >= ay and ax >= az:
+		axis = Vector3i(1 if n.x > 0.0 else -1, 0, 0)
+	elif ay >= az:
+		axis = Vector3i(0, 1 if n.y > 0.0 else -1, 0)
+	else:
+		axis = Vector3i(0, 0, 1 if n.z > 0.0 else -1)
+	return _get_remove_position(result) + axis
 
 # --- ghost preview -------------------------------------------------------
 
