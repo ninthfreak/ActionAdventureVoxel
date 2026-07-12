@@ -55,7 +55,6 @@ light_color = Color(1, 0.95, 0.86, 1)
 light_energy = 1.2
 shadow_enabled = true
 directional_shadow_max_distance = 80.0
-directional_shadow_blend_splits = true
 
 [node name="Player" type="CharacterBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1, 0.5)

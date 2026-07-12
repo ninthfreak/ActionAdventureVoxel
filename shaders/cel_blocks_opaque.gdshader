@@ -10,6 +10,10 @@ uniform vec3 albedo : source_color = vec3(1.0);
 uniform float shadow_strength : hint_range(0.0, 1.0) = 0.35;
 uniform int bands : hint_range(2, 5) = 3;
 uniform bool use_vertex_color = false;
+// Textured cube proxies sample their face atlas instead of vertex colors.
+// No source_color hint: the atlas stores the raw linear vertex-color values.
+uniform sampler2D albedo_tex : filter_nearest;
+uniform bool use_texture = false;
 uniform vec3 lit_tint : source_color = vec3(1.0, 0.97, 0.89);
 uniform vec3 shadow_tint : source_color = vec3(0.78, 0.84, 1.0);
 uniform bool cutaway_affected = false;
@@ -40,7 +44,11 @@ void fragment() {
 			}
 		}
 	}
-	ALBEDO = use_vertex_color ? COLOR.rgb : albedo;
+	if (use_texture) {
+		ALBEDO = texture(albedo_tex, UV).rgb;
+	} else {
+		ALBEDO = use_vertex_color ? COLOR.rgb : albedo;
+	}
 	ROUGHNESS = 1.0;
 	SPECULAR = 0.0;
 }
